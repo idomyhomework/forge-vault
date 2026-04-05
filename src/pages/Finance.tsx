@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 import type { Transaction, Category, TransactionType } from "../types";
 
 // ── Default categories ─────────────────────────────────────────────────────
@@ -13,6 +14,7 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: "salud", name: "Salud", icon: "🏥", type: "gasto" },
 ];
 
+// ── Emoji options ────────────────────────────────────────────────────────────
 const EMOJI_OPTIONS = [
   "💰",
   "💻",
@@ -36,6 +38,7 @@ const EMOJI_OPTIONS = [
   "🎁",
 ];
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
   return `US$ ${Math.abs(n).toLocaleString("es-ES", { minimumFractionDigits: 0 })}`;
 }
@@ -273,11 +276,11 @@ function AddCategoryModal({
 // ── Finance Page ───────────────────────────────────────────────────────────
 export default function Finance() {
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>(
-    "finance_transactions",
+    STORAGE_KEYS.transactions,
     [],
   );
   const [categories, setCategories] = useLocalStorage<Category[]>(
-    "finance_categories",
+    STORAGE_KEYS.categories,
     DEFAULT_CATEGORIES,
   );
   const [showAddTx, setShowAddTx] = useState(false);

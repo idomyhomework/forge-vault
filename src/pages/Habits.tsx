@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 import type { Habit, WeekRecord } from "../types";
 
+// ── Constants ────────────────────────────────────────────────────────────────
 const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
 const XP_PER_CHECK = 25;
 
+// ── Color presets ────────────────────────────────────────────────────────────
 const COLOR_PRESETS = [
   { color: "bg-sky-400", accentHex: "#38bdf8" },
   { color: "bg-cyan-400", accentHex: "#22d3ee" },
@@ -16,10 +19,12 @@ const COLOR_PRESETS = [
   { color: "bg-rose-400", accentHex: "#fb7185" },
 ];
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// ── Initial habits ───────────────────────────────────────────────────────────
 const INITIAL_HABITS: Habit[] = [
   {
     id: "wake",
@@ -375,11 +380,11 @@ function HistoryModal({
 // ── Habits Page ────────────────────────────────────────────────────────────
 export default function Habits() {
   const [habits, setHabits] = useLocalStorage<Habit[]>(
-    "habits_data",
+    STORAGE_KEYS.habits,
     INITIAL_HABITS,
   );
   const [history, setHistory] = useLocalStorage<WeekRecord[]>(
-    "habits_history",
+    STORAGE_KEYS.habitsHistory,
     [],
   );
 

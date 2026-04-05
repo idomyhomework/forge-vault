@@ -1,3 +1,4 @@
+// ── Habit types ─────────────────────────────────────────────────────────────
 export interface Habit {
   id: string;
   label: string;
@@ -12,6 +13,7 @@ export interface WeekRecord {
   habits: Habit[];
 }
 
+// ── Finance types ────────────────────────────────────────────────────────────
 export type TransactionType = "ingreso" | "gasto";
 
 export interface Category {
@@ -30,4 +32,5 @@ export interface Transaction {
   date: string;
 }
 
+// ── Navigation types ─────────────────────────────────────────────────────────
 export type Tab = "habitos" | "finanzas" | "gym" | "ahorros";

@@ -199,3 +199,13 @@ psql -U <user> -d <dbname>   # Connect to PostgreSQL
 alembic history               # View migration history
 alembic downgrade -1          # Roll back one migration
 ```
+
+## Comments
+
+Use the comments like these:
+// ── Add Transaction Modal ──────────────────────────────────────────────────
+// ── Tab config ─────────────────────────────────────────────────────────────
+// ── Placeholder for unbuilt modules ───────────────────────────────────────
+// ── App ────────────────────────────────────────────────────────────────────
+
+I want to see every part of code separated and explained clearly in this way. Use it on every component, method, function, constaint, constructor, use these comments on the backend and on the frontend
