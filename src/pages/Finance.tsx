@@ -1,42 +1,24 @@
 import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Banknote } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../utils/storageKeys";
+import { CATEGORY_ICON_MAP, CATEGORY_ICON_KEYS } from "../utils/icons";
 import type { Transaction, Category, TransactionType } from "../types";
 
 // ── Default categories ─────────────────────────────────────────────────────
 const DEFAULT_CATEGORIES: Category[] = [
-  { id: "salario", name: "Salario", icon: "💰", type: "ingreso" },
-  { id: "freelance", name: "Freelance", icon: "💻", type: "ingreso" },
-  { id: "comida", name: "Comida", icon: "🍔", type: "gasto" },
-  { id: "transporte", name: "Transporte", icon: "🚗", type: "gasto" },
-  { id: "ocio", name: "Ocio", icon: "🎮", type: "gasto" },
-  { id: "streaming", name: "Streaming", icon: "📺", type: "gasto" },
-  { id: "salud", name: "Salud", icon: "🏥", type: "gasto" },
+  { id: "salario", name: "Salario", icon: "banknote", type: "ingreso" },
+  { id: "freelance", name: "Freelance", icon: "laptop", type: "ingreso" },
+  { id: "comida", name: "Comida", icon: "utensils", type: "gasto" },
+  { id: "transporte", name: "Transporte", icon: "car", type: "gasto" },
+  { id: "ocio", name: "Ocio", icon: "gamepad", type: "gasto" },
+  { id: "streaming", name: "Streaming", icon: "tv", type: "gasto" },
+  { id: "salud", name: "Salud", icon: "heartPulse", type: "gasto" },
 ];
 
-// ── Emoji options ────────────────────────────────────────────────────────────
-const EMOJI_OPTIONS = [
-  "💰",
-  "💻",
-  "🍔",
-  "🚗",
-  "🎮",
-  "📺",
-  "🏥",
-  "✈️",
-  "🛒",
-  "🎓",
-  "💊",
-  "🏋️",
-  "☕",
-  "🐶",
-  "🎵",
-  "🏠",
-  "👕",
-  "💡",
-  "📱",
-  "🎁",
-];
+// ── Icon options ─────────────────────────────────────────────────────────────
+const EMOJI_OPTIONS = CATEGORY_ICON_KEYS;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
@@ -58,8 +40,8 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="bg-[#1c1c2e] rounded-2xl p-3 flex flex-col gap-1 border border-white/5">
-      <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
+    <div className="bg-card rounded-2xl p-3 flex flex-col gap-1 border border-line">
+      <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
         {label}
       </span>
       <span className={`text-lg font-black ${color}`}>{value}</span>
@@ -92,20 +74,34 @@ function AddTransactionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 p-4">
-      <div className="bg-[#16162a] rounded-3xl w-full max-w-sm p-5 border border-white/10 flex flex-col gap-4 mb-16">
+    <motion.div
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="bg-card rounded-3xl w-full max-w-sm p-5 border border-line flex flex-col gap-4 mb-16"
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 60, opacity: 0 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-black text-white">Nueva transacción</h2>
+          <h2 className="font-display text-base uppercase tracking-wide text-fore">
+            Nueva transacción
+          </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"
+            className="text-muted hover:text-fore text-2xl leading-none w-8 h-8 flex items-center justify-center transition-colors"
           >
             ×
           </button>
         </div>
 
         {/* Type toggle */}
-        <div className="flex rounded-xl overflow-hidden border border-white/10">
+        <div className="flex rounded-xl overflow-hidden border border-line">
           {(["ingreso", "gasto"] as TransactionType[]).map((t) => (
             <button
               key={t}
@@ -113,12 +109,12 @@ function AddTransactionModal({
                 setType(t);
                 setCategoryId("");
               }}
-              className={`flex-1 py-2 text-xs font-bold capitalize transition-colors ${
+              className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
                 type === t
                   ? t === "ingreso"
-                    ? "bg-emerald-500 text-white"
-                    : "bg-red-500 text-white"
-                  : "bg-transparent text-slate-400"
+                    ? "bg-emerald-500 text-surface"
+                    : "bg-red-500 text-surface"
+                  : "bg-transparent text-muted hover:text-fore"
               }`}
             >
               {t === "ingreso" ? "➕ Ingreso" : "➖ Gasto"}
@@ -128,7 +124,7 @@ function AddTransactionModal({
 
         {/* Amount */}
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-muted text-sm">
             US$
           </span>
           <input
@@ -136,7 +132,7 @@ function AddTransactionModal({
             placeholder="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-[#1c1c2e] rounded-xl pl-12 pr-4 py-3 text-white text-sm font-bold border border-white/10 focus:outline-none focus:border-red-500"
+            className="w-full bg-card2 rounded-xl pl-12 pr-4 py-3 text-black text-sm font-bold border border-line focus:outline-none focus:border-acid transition-colors"
           />
         </div>
 
@@ -146,12 +142,12 @@ function AddTransactionModal({
           placeholder="Descripción (opcional)"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
-          className="w-full bg-[#1c1c2e] rounded-xl px-4 py-3 text-white text-sm border border-white/10 focus:outline-none focus:border-red-500 placeholder:text-slate-600"
+          className="w-full bg-card2 rounded-xl px-4 py-3 text-black text-sm border border-line focus:outline-none focus:border-acid placeholder:text-muted transition-colors"
         />
 
         {/* Category grid */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2">
             Categoría
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -159,13 +155,18 @@ function AddTransactionModal({
               <button
                 key={cat.id}
                 onClick={() => setCategoryId(cat.id)}
-                className={`rounded-xl py-2 px-1 flex flex-col items-center gap-1 border text-xs font-semibold transition-all ${
+                className={`rounded-xl py-2 px-1 flex flex-col items-center gap-1 border font-mono text-xs uppercase transition-all ${
                   categoryId === cat.id
-                    ? "border-red-500 bg-red-500/10 text-white"
-                    : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"
+                    ? type === "ingreso"
+                      ? "border-emerald-400 bg-emerald-400/10 text-emerald-400"
+                      : "border-crimson bg-crimson/10 text-crimson"
+                    : "border-line bg-card2 text-muted hover:border-acid/50"
                 }`}
               >
-                <span className="text-lg">{cat.icon}</span>
+                {(() => {
+                  const Icon = CATEGORY_ICON_MAP[cat.icon];
+                  return Icon ? <Icon className="w-4 h-4" /> : null;
+                })()}
                 {cat.name}
               </button>
             ))}
@@ -175,12 +176,12 @@ function AddTransactionModal({
         <button
           onClick={handleSubmit}
           disabled={!amount || !categoryId}
-          className="bg-red-500 hover:bg-red-600 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-2xl py-3 transition-all active:scale-95"
+          className="bg-acid hover:bg-acid2 disabled:opacity-30 disabled:cursor-not-allowed text-surface font-display uppercase tracking-wide rounded-2xl py-3 transition-all active:scale-95"
         >
           Añadir transacción
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -193,33 +194,47 @@ function AddCategoryModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("💰");
+  const [icon, setIcon] = useState("banknote");
   const [type, setType] = useState<TransactionType>("gasto");
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 p-4">
-      <div className="bg-[#16162a] rounded-3xl w-full max-w-sm p-5 border border-white/10 flex flex-col gap-4 mb-16">
+    <motion.div
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="bg-card rounded-3xl w-full max-w-sm p-5 border border-line flex flex-col gap-4 mb-16"
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 60, opacity: 0 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-black text-white">Nueva categoría</h2>
+          <h2 className="font-display text-base uppercase tracking-wide text-fore">
+            Nueva categoría
+          </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"
+            className="text-muted hover:text-fore text-2xl leading-none w-8 h-8 flex items-center justify-center transition-colors"
           >
             ×
           </button>
         </div>
 
-        <div className="flex rounded-xl overflow-hidden border border-white/10">
+        <div className="flex rounded-xl overflow-hidden border border-line">
           {(["ingreso", "gasto"] as TransactionType[]).map((t) => (
             <button
               key={t}
               onClick={() => setType(t)}
-              className={`flex-1 py-2 text-xs font-bold capitalize transition-colors ${
+              className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
                 type === t
                   ? t === "ingreso"
-                    ? "bg-emerald-500 text-white"
-                    : "bg-red-500 text-white"
-                  : "bg-transparent text-slate-400"
+                    ? "bg-emerald-500 text-surface"
+                    : "bg-red-500 text-surface"
+                  : "bg-transparent text-muted hover:text-fore"
               }`}
             >
               {t}
@@ -232,27 +247,30 @@ function AddCategoryModal({
           placeholder="Nombre de la categoría"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full bg-[#1c1c2e] rounded-xl px-4 py-3 text-white text-sm border border-white/10 focus:outline-none focus:border-red-500 placeholder:text-slate-600"
+          className="w-full bg-card2 rounded-xl px-4 py-3 text-black text-sm border border-line focus:outline-none focus:border-acid placeholder:text-muted transition-colors"
         />
 
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2">
             Icono
           </p>
           <div className="grid grid-cols-10 gap-1">
-            {EMOJI_OPTIONS.map((e) => (
-              <button
-                key={e}
-                onClick={() => setIcon(e)}
-                className={`text-lg rounded-lg p-1 transition-all ${
-                  icon === e
-                    ? "bg-red-500/20 ring-1 ring-red-500"
-                    : "hover:bg-white/5"
-                }`}
-              >
-                {e}
-              </button>
-            ))}
+            {EMOJI_OPTIONS.map((key) => {
+              const Icon = CATEGORY_ICON_MAP[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => setIcon(key)}
+                  className={`flex items-center justify-center rounded-lg p-2 transition-all ${
+                    icon === key
+                      ? "bg-acid/15 ring-1 ring-acid text-acid"
+                      : "hover:bg-card2 text-muted hover:text-fore"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -264,12 +282,12 @@ function AddCategoryModal({
             }
           }}
           disabled={!name.trim()}
-          className="bg-red-500 hover:bg-red-600 disabled:opacity-30 text-white font-black rounded-2xl py-3 transition-all active:scale-95"
+          className="bg-acid hover:bg-acid2 disabled:opacity-30 text-surface font-display uppercase tracking-wide rounded-2xl py-3 transition-all active:scale-95"
         >
           Crear categoría
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -326,7 +344,7 @@ export default function Finance() {
         <StatCard
           label="Saldo"
           value={fmt(saldo)}
-          color={saldo >= 0 ? "text-white" : "text-red-400"}
+          color={saldo >= 0 ? "text-fore" : "text-crimson"}
         />
         <StatCard
           label="Ingresos"
@@ -336,7 +354,7 @@ export default function Finance() {
         <StatCard
           label="Gastos"
           value={fmt(totalGastos)}
-          color="text-red-400"
+          color="text-crimson"
         />
       </div>
 
@@ -344,28 +362,28 @@ export default function Finance() {
       <div className="flex gap-2">
         <button
           onClick={() => setShowAddTx(true)}
-          className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black rounded-2xl py-3 text-sm transition-all active:scale-95"
+          className="flex-1 bg-acid hover:bg-acid2 text-surface font-display uppercase tracking-wide rounded-2xl py-3 text-sm transition-all active:scale-95"
         >
           + Transacción
         </button>
         <button
           onClick={() => setShowAddCat(true)}
-          className="bg-[#1c1c2e] border border-white/10 text-slate-300 font-bold rounded-2xl px-4 py-3 text-sm hover:bg-white/5 transition-all active:scale-95"
+          className="bg-card border border-line text-fore font-mono rounded-2xl px-4 py-3 text-xs uppercase tracking-wider hover:border-acid transition-all active:scale-95"
         >
-          + Categoría
+          + Cat
         </button>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex rounded-xl overflow-hidden border border-white/10 bg-[#1c1c2e]">
+      <div className="flex rounded-xl overflow-hidden border border-line bg-card">
         {(["all", "ingreso", "gasto"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilterType(f)}
-            className={`flex-1 py-2 text-xs font-bold transition-colors ${
+            className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
               filterType === f
-                ? "bg-white/10 text-white"
-                : "text-slate-500 hover:text-slate-300"
+                ? "bg-acid/15 text-acid"
+                : "text-muted hover:text-fore"
             }`}
           >
             {f === "all" ? "Todo" : f === "ingreso" ? "Ingresos" : "Gastos"}
@@ -375,10 +393,15 @@ export default function Finance() {
 
       {/* Transaction list */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-slate-600">
-          <p className="text-4xl mb-3">💸</p>
-          <p className="text-sm font-semibold">Sin transacciones aún</p>
-          <p className="text-xs mt-1 text-slate-700">
+        <div className="text-center py-16">
+          <Banknote
+            className="w-10 h-10 mx-auto mb-3 opacity-20 text-muted"
+            strokeWidth={1}
+          />
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+            Sin transacciones aún
+          </p>
+          <p className="font-mono text-[10px] mt-1 text-acid/60">
             Pulsa "+ Transacción" para empezar
           </p>
         </div>
@@ -389,14 +412,19 @@ export default function Finance() {
             return (
               <div
                 key={tx.id}
-                className="bg-[#1c1c2e] rounded-2xl px-4 py-3 flex items-center gap-3 border border-white/5 group"
+                className="bg-card rounded-2xl px-4 py-3 flex items-center gap-3 border border-line group hover:border-acid/30 transition-colors"
               >
-                <span className="text-2xl">{cat?.icon ?? "💸"}</span>
+                {(() => {
+                  const Icon = cat
+                    ? (CATEGORY_ICON_MAP[cat.icon] ?? Banknote)
+                    : Banknote;
+                  return <Icon className="w-5 h-5 text-muted flex-shrink-0" />;
+                })()}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">
+                  <p className="text-sm font-bold text-fore truncate">
                     {tx.description || cat?.name || "Transacción"}
                   </p>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="font-mono text-[10px] text-muted">
                     {cat?.name} ·{" "}
                     {new Date(tx.date).toLocaleDateString("es-ES", {
                       day: "2-digit",
@@ -406,8 +434,8 @@ export default function Finance() {
                   </p>
                 </div>
                 <span
-                  className={`text-sm font-black flex-shrink-0 ${
-                    tx.type === "ingreso" ? "text-emerald-400" : "text-red-400"
+                  className={`font-mono text-sm font-bold flex-shrink-0 ${
+                    tx.type === "ingreso" ? "text-emerald-400" : "text-crimson"
                   }`}
                 >
                   {tx.type === "ingreso" ? "+" : "-"}
@@ -415,7 +443,7 @@ export default function Finance() {
                 </span>
                 <button
                   onClick={() => deleteTransaction(tx.id)}
-                  className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all ml-1 text-xl leading-none w-6 h-6 flex items-center justify-center flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 text-muted hover:text-crimson transition-all ml-1 text-xl leading-none w-6 h-6 flex items-center justify-center flex-shrink-0"
                 >
                   ×
                 </button>
@@ -427,13 +455,13 @@ export default function Finance() {
 
       {/* Footer summary */}
       {transactions.length > 0 && (
-        <div className="bg-[#1c1c2e] rounded-2xl px-4 py-3 border border-white/5 flex justify-between items-center">
-          <span className="text-xs text-slate-500">
+        <div className="bg-card rounded-2xl px-4 py-3 border border-line flex justify-between items-center">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
             {transactions.length} transacción
             {transactions.length !== 1 ? "es" : ""}
           </span>
           <span
-            className={`text-xs font-black ${saldo >= 0 ? "text-emerald-400" : "text-red-400"}`}
+            className={`font-mono text-xs font-bold ${saldo >= 0 ? "text-emerald-400" : "text-crimson"}`}
           >
             Balance: {saldo >= 0 ? "+" : ""}
             {saldo < 0 ? "-" : ""}
@@ -442,19 +470,23 @@ export default function Finance() {
         </div>
       )}
 
-      {showAddTx && (
-        <AddTransactionModal
-          categories={categories}
-          onAdd={addTransaction}
-          onClose={() => setShowAddTx(false)}
-        />
-      )}
-      {showAddCat && (
-        <AddCategoryModal
-          onAdd={addCategory}
-          onClose={() => setShowAddCat(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showAddTx && (
+          <AddTransactionModal
+            categories={categories}
+            onAdd={addTransaction}
+            onClose={() => setShowAddTx(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showAddCat && (
+          <AddCategoryModal
+            onAdd={addCategory}
+            onClose={() => setShowAddCat(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

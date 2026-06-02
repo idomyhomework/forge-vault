@@ -32,5 +32,32 @@ export interface Transaction {
   date: string;
 }
 
+// ── Notes types ──────────────────────────────────────────────────────────────
+export type NoteColor =
+  | "fore"
+  | "acid"
+  | "muted"
+  | "crimson"
+  | "blue-acc"
+  | "orange-acc"
+  | "purple-acc";
+
+export type NoteBlockType = "text" | "list";
+
+export interface NoteBlock {
+  id: string;
+  type: NoteBlockType;
+  color: NoteColor;
+  content: string;
+  items: string[];
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  blocks: NoteBlock[];
+  createdAt: string;
+}
+
 // ── Navigation types ─────────────────────────────────────────────────────────
-export type Tab = "habitos" | "finanzas" | "gym" | "ahorros";
+export type Tab = "habitos" | "finanzas" | "gym" | "ahorros" | "notas";

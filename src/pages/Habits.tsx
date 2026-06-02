@@ -1,6 +1,9 @@
 import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ClipboardList } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../utils/storageKeys";
+import { HABIT_ICON_MAP, HABIT_ICON_KEYS } from "../utils/icons";
 import type { Habit, WeekRecord } from "../types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -29,7 +32,7 @@ const INITIAL_HABITS: Habit[] = [
   {
     id: "wake",
     label: "Despertar a las 05:00",
-    icon: "⏰",
+    icon: "clock",
     color: "bg-sky-400",
     accentHex: "#38bdf8",
     checks: [false, false, false, false, false, false, false],
@@ -37,7 +40,7 @@ const INITIAL_HABITS: Habit[] = [
   {
     id: "gym",
     label: "Gimnasio",
-    icon: "💪",
+    icon: "dumbbell",
     color: "bg-cyan-400",
     accentHex: "#22d3ee",
     checks: [false, false, false, false, false, false, false],
@@ -45,7 +48,7 @@ const INITIAL_HABITS: Habit[] = [
   {
     id: "reading",
     label: "Lectura / Aprendizaje",
-    icon: "📚",
+    icon: "bookOpen",
     color: "bg-emerald-400",
     accentHex: "#34d399",
     checks: [false, false, false, false, false, false, false],
@@ -53,7 +56,7 @@ const INITIAL_HABITS: Habit[] = [
   {
     id: "planning",
     label: "Planificación del día",
-    icon: "🗓️",
+    icon: "calendar",
     color: "bg-pink-400",
     accentHex: "#f472b6",
     checks: [false, false, false, false, false, false, false],
@@ -117,7 +120,7 @@ function ConsistencyChart({
           cx={p.x}
           cy={p.y}
           r="4"
-          fill="#1a1a2e"
+          fill="#0a0a0c"
           stroke={accentHex}
           strokeWidth="2"
           style={{ transition: `cy ${ease}` }}
@@ -130,8 +133,8 @@ function ConsistencyChart({
           y={H - 1}
           textAnchor="middle"
           fontSize="9"
-          fill="#64748b"
-          fontFamily="inherit"
+          fill="#8b8b9a"
+          fontFamily="Space Mono, monospace"
         >
           {DAYS[i]}
         </text>
@@ -154,7 +157,9 @@ function CheckBox({
     <button
       onClick={onToggle}
       className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300 ease-in-out active:scale-90 ${
-        checked ? `${color} shadow-lg` : "bg-white/5 hover:bg-white/10"
+        checked
+          ? `${color} shadow-lg`
+          : "bg-card2 hover:bg-line border border-line"
       }`}
     >
       <svg
@@ -164,7 +169,7 @@ function CheckBox({
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white transition-opacity duration-300"
+        className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-surface transition-opacity duration-300"
         style={{ opacity: checked ? 1 : 0 }}
       >
         <polyline points="2,8 6,12 14,4" />
@@ -172,6 +177,9 @@ function CheckBox({
     </button>
   );
 }
+
+// ── Icon options ─────────────────────────────────────────────────────────────
+const ICON_OPTIONS = HABIT_ICON_KEYS;
 
 // ── Add Habit Modal ────────────────────────────────────────────────────────
 function AddHabitModal({
@@ -182,14 +190,14 @@ function AddHabitModal({
   onClose: () => void;
 }) {
   const [label, setLabel] = useState("");
-  const [icon, setIcon] = useState("");
-  const [colorIdx, setColorIdx] = useState(0);
+  const [icon, setIcon] = useState("clock");
+  const [colorIdx] = useState(0);
 
   const handleSubmit = () => {
     if (!label.trim()) return;
     onAdd({
       label: label.trim(),
-      icon: icon.trim() || "✨",
+      icon,
       color: COLOR_PRESETS[colorIdx].color,
       accentHex: COLOR_PRESETS[colorIdx].accentHex,
     });
@@ -197,57 +205,65 @@ function AddHabitModal({
   };
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
     >
-      <div className="w-full sm:max-w-sm md:max-w-md bg-[#16162a] rounded-t-3xl sm:rounded-2xl p-5 border border-white/10 flex flex-col gap-4">
+      <motion.div
+        className="w-full sm:max-w-sm md:max-w-md bg-card rounded-t-3xl sm:rounded-2xl p-5 border border-line flex flex-col gap-4"
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 60, opacity: 0 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white">Nuevo hábito</span>
+          <span className="font-display text-sm uppercase tracking-wide text-fore">
+            Nuevo hábito
+          </span>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white text-xl leading-none transition-colors"
+            className="text-muted hover:text-fore text-xl leading-none transition-colors"
           >
             ×
           </button>
         </div>
+        {/* Label */}
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Nombre del hábito"
+          className="w-full bg-card2 border border-line rounded-xl px-3 py-2 text-sm text-black placeholder-muted focus:outline-none focus:border-acid transition-colors"
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+        />
 
-        {/* Icon + Label */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={icon}
-            onChange={(e) => setIcon(e.target.value)}
-            placeholder="✨"
-            maxLength={2}
-            className="w-12 text-center bg-white/5 border border-white/10 rounded-xl text-lg py-2 text-white placeholder-slate-600 focus:outline-none focus:border-white/30"
-          />
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Nombre del hábito"
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-white/30"
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          />
-        </div>
-
-        {/* Color picker */}
+        {/* Icon picker */}
         <div>
-          <span className="text-xs text-slate-500 mb-2 block">Color</span>
-          <div className="grid grid-cols-8 gap-2">
-            {COLOR_PRESETS.map((opt, i) => (
-              <button
-                key={opt.accentHex}
-                onClick={() => setColorIdx(i)}
-                className={`w-8 h-8 rounded-full ${opt.color} transition-transform active:scale-90 ${
-                  colorIdx === i
-                    ? "ring-2 ring-white ring-offset-2 ring-offset-[#16162a] scale-110"
-                    : ""
-                }`}
-              />
-            ))}
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2 block">
+            Icono
+          </span>
+          <div className="grid grid-cols-8 gap-1">
+            {ICON_OPTIONS.map((key) => {
+              const Icon = HABIT_ICON_MAP[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => setIcon(key)}
+                  className={`flex items-center justify-center rounded-lg p-2 transition-all ${
+                    icon === key
+                      ? "bg-acid/15 ring-1 ring-acid text-acid"
+                      : "hover:bg-card2 text-muted hover:text-fore"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -255,21 +271,21 @@ function AddHabitModal({
         <div className="flex gap-2 pt-1">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-400 bg-white/5 hover:bg-white/10 transition-colors"
+            className="flex-1 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider text-muted bg-card2 border border-line hover:border-acid transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             disabled={!label.trim()}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity disabled:opacity-40"
+            className="flex-1 py-2.5 rounded-xl font-display text-sm uppercase tracking-wide text-surface transition-opacity disabled:opacity-40"
             style={{ backgroundColor: COLOR_PRESETS[colorIdx].accentHex }}
           >
             Crear
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -282,26 +298,36 @@ function HistoryModal({
   onClose: () => void;
 }) {
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
     >
-      <div className="w-full sm:max-w-sm bg-[#16162a] rounded-t-3xl sm:rounded-2xl p-5 border border-white/10 flex flex-col gap-4 max-h-[85vh]">
+      <motion.div
+        className="w-full sm:max-w-sm bg-card rounded-t-3xl sm:rounded-2xl p-5 border border-line flex flex-col gap-4 max-h-[85vh]"
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 60, opacity: 0 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between flex-shrink-0">
-          <span className="text-sm font-bold text-white">
+          <span className="font-display text-sm uppercase tracking-wide text-fore">
             Historial semanal
           </span>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white text-xl leading-none transition-colors"
+            className="text-muted hover:text-fore text-xl leading-none transition-colors"
           >
             ×
           </button>
         </div>
 
         {history.length === 0 ? (
-          <p className="text-slate-600 text-xs text-center py-10">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted text-center py-10">
             Sin semanas guardadas aún
           </p>
         ) : (
@@ -325,14 +351,14 @@ function HistoryModal({
               return (
                 <div
                   key={idx}
-                  className="bg-white/5 rounded-2xl p-3.5 border border-white/5 flex flex-col gap-2.5"
+                  className="bg-card2 rounded-2xl p-3.5 border border-line flex flex-col gap-2.5"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-200">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-fore">
                       Semana del {dateLabel}
                     </span>
-                    <span className="text-xs font-bold text-yellow-400">
-                      ✨ {xp} XP
+                    <span className="font-mono text-xs font-bold text-acid">
+                      ✦ {xp} XP
                     </span>
                   </div>
 
@@ -342,11 +368,11 @@ function HistoryModal({
                       return (
                         <div
                           key={h.id}
-                          className="flex items-center gap-1 bg-white/5 rounded-lg px-2 py-1"
+                          className="flex items-center gap-1 bg-card border border-line rounded-lg px-2 py-1"
                         >
-                          <span className="text-xs">{h.icon}</span>
+                          {(() => { const Icon = HABIT_ICON_MAP[h.icon]; return Icon ? <Icon className="w-3.5 h-3.5" /> : null; })()}
                           <span
-                            className="text-[10px] font-semibold"
+                            className="font-mono text-[10px]"
                             style={{ color: h.accentHex }}
                           >
                             {done}/7
@@ -357,13 +383,13 @@ function HistoryModal({
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-line rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="h-full bg-red-500 rounded-full"
+                        className="h-full bg-acid rounded-full"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="font-mono text-[10px] text-muted">
                       {totalChecked}/{possible} completados · {pct}%
                     </span>
                   </div>
@@ -372,8 +398,8 @@ function HistoryModal({
             })}
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -444,7 +470,7 @@ export default function Habits() {
     [habits],
   );
 
-  const chartColor = "#ef4444";
+  const chartColor = "#d4ff3f";
   const totalChecked = habits.reduce(
     (s, h) => s + h.checks.filter(Boolean).length,
     0,
@@ -454,11 +480,11 @@ export default function Habits() {
     <div className="flex flex-col gap-4 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-200">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
           Consistencia semanal
         </span>
-        <span className="text-sm font-bold text-yellow-400 flex items-center gap-1">
-          ✨ {totalXP} XP
+        <span className="font-mono text-xs text-acid font-bold flex items-center gap-1">
+          ✦ {totalXP} XP
         </span>
       </div>
 
@@ -469,16 +495,16 @@ export default function Habits() {
             setEditMode(false);
             setShowAddHabit(true);
           }}
-          className="flex items-center gap-1 bg-white/5 hover:bg-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors"
+          className="flex items-center gap-1 bg-card2 border border-line hover:border-acid rounded-xl px-3 py-1.5 font-mono text-xs text-fore transition-colors"
         >
           + Hábito
         </button>
         <button
           onClick={() => setEditMode((v) => !v)}
-          className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+          className={`flex items-center gap-1 rounded-xl px-3 py-1.5 font-mono text-xs transition-colors border ${
             editMode
-              ? "bg-red-500/20 text-red-400"
-              : "bg-white/5 hover:bg-white/10 text-slate-300"
+              ? "border-crimson/40 bg-crimson/10 text-crimson"
+              : "border-line bg-card2 hover:border-acid text-fore"
           }`}
         >
           {editMode ? "Listo" : "Editar"}
@@ -486,25 +512,27 @@ export default function Habits() {
         <div className="flex-1" />
         <button
           onClick={() => setShowHistory(true)}
-          className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors"
+          className="flex items-center gap-1.5 bg-card2 border border-line hover:border-acid rounded-xl px-3 py-1.5 font-mono text-xs text-fore transition-colors"
         >
-          📋 Historial
+          <ClipboardList className="w-3.5 h-3.5" /> Historial
         </button>
       </div>
 
       {/* Chart */}
-      <div className="bg-[#1c1c2e] rounded-2xl p-3 border border-white/5">
+      <div className="bg-card rounded-2xl p-3 border border-line">
         <ConsistencyChart habits={habits} accentHex={chartColor} />
       </div>
 
       {/* Column headers */}
       <div className="flex items-center px-1">
-        <span className="flex-1 text-xs text-slate-500">Hábito</span>
+        <span className="flex-1 font-mono text-[10px] uppercase tracking-widest text-muted">
+          Hábito
+        </span>
         <div className="flex gap-1">
           {DAYS.map((d) => (
             <span
               key={d}
-              className="w-7 sm:w-9 text-center text-xs font-semibold text-slate-500"
+              className="w-7 sm:w-9 text-center font-mono text-[10px] uppercase text-muted"
             >
               {d}
             </span>
@@ -512,7 +540,7 @@ export default function Habits() {
         </div>
       </div>
 
-      <div className="h-px bg-white/5" />
+      <div className="h-px bg-line" />
 
       {/* Habits list */}
       <div className="flex flex-col gap-2">
@@ -521,14 +549,14 @@ export default function Habits() {
             {editMode && (
               <button
                 onClick={() => deleteHabit(habit.id)}
-                className="w-6 h-6 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 flex-shrink-0 text-base leading-none transition-colors"
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-crimson/20 text-crimson hover:bg-crimson/30 flex-shrink-0 text-base leading-none transition-colors"
               >
                 −
               </button>
             )}
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-base flex-shrink-0">{habit.icon}</span>
-              <span className="text-sm font-medium text-white truncate">
+              {(() => { const Icon = HABIT_ICON_MAP[habit.icon]; return Icon ? <Icon className="w-4 h-4 flex-shrink-0 text-fore" /> : null; })()}
+              <span className="text-sm font-medium text-fore truncate">
                 {habit.label}
               </span>
             </div>
@@ -546,31 +574,33 @@ export default function Habits() {
         ))}
 
         {habits.length === 0 && (
-          <p className="text-xs text-slate-600 text-center py-6">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted text-center py-6">
             Sin hábitos. ¡Crea el primero!
           </p>
         )}
       </div>
 
       {/* Footer */}
-      <div className="mt-2 pt-3 border-t border-white/5 flex justify-between items-center gap-3">
-        <span className="text-xs text-slate-500">Esta semana</span>
+      <div className="mt-2 pt-3 border-t border-line flex justify-between items-center gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          Esta semana
+        </span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400">
+          <span className="font-mono text-xs text-muted">
             {totalChecked} / {habits.length * 7} completados
           </span>
           {confirmReset ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">¿Seguro?</span>
+              <span className="font-mono text-xs text-muted">¿Seguro?</span>
               <button
                 onClick={resetWeek}
-                className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors"
+                className="font-mono text-xs font-bold text-crimson hover:text-crimson/80 transition-colors"
               >
                 Sí
               </button>
               <button
                 onClick={() => setConfirmReset(false)}
-                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                className="font-mono text-xs text-muted hover:text-fore transition-colors"
               >
                 No
               </button>
@@ -578,7 +608,7 @@ export default function Habits() {
           ) : (
             <button
               onClick={() => setConfirmReset(true)}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+              className="font-mono text-[10px] uppercase tracking-wider text-muted hover:text-fore transition-colors"
             >
               Reiniciar semana
             </button>
@@ -587,15 +617,19 @@ export default function Habits() {
       </div>
 
       {/* Modals */}
-      {showAddHabit && (
-        <AddHabitModal
-          onAdd={addHabit}
-          onClose={() => setShowAddHabit(false)}
-        />
-      )}
-      {showHistory && (
-        <HistoryModal history={history} onClose={() => setShowHistory(false)} />
-      )}
+      <AnimatePresence>
+        {showAddHabit && (
+          <AddHabitModal
+            onAdd={addHabit}
+            onClose={() => setShowAddHabit(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showHistory && (
+          <HistoryModal history={history} onClose={() => setShowHistory(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

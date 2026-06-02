@@ -1,25 +1,37 @@
 import { useState } from "react";
+import {
+  CheckSquare,
+  Banknote,
+  Dumbbell,
+  PiggyBank,
+  NotebookText,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Tab } from "./types";
 import Habits from "./pages/Habits";
-import Finance from "./pages/finance";
+import Finance from "./pages/Finance";
+import Notes from "./pages/Notes";
 import "./App.css";
 
 // ── Tab config ─────────────────────────────────────────────────────────────
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "habitos", label: "Hábitos", icon: "✅" },
-  { id: "finanzas", label: "Finanzas", icon: "💸" },
-  { id: "gym", label: "Gym", icon: "🏋️" },
-  { id: "ahorros", label: "Ahorros", icon: "🎯" },
+const TABS: { id: Tab; label: string; Icon: LucideIcon }[] = [
+  { id: "habitos", label: "Hábitos", Icon: CheckSquare },
+  { id: "finanzas", label: "Finanzas", Icon: Banknote },
+  { id: "gym", label: "Gym", Icon: Dumbbell },
+  { id: "ahorros", label: "Ahorros", Icon: PiggyBank },
+  { id: "notas", label: "Notas", Icon: NotebookText },
 ];
 
 // ── Placeholder for unbuilt modules ───────────────────────────────────────
-function ComingSoon({ label, icon }: { label: string; icon: string }) {
+function ComingSoon({ label, Icon }: { label: string; Icon: LucideIcon }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4 text-slate-600">
-      <span className="text-6xl opacity-30">{icon}</span>
+    <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <Icon className="w-16 h-16 opacity-20 text-muted" strokeWidth={1} />
       <div className="text-center">
-        <p className="text-sm font-bold text-slate-500">{label}</p>
-        <p className="text-xs mt-1 text-slate-700">Próximamente</p>
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          {label}
+        </p>
+        <p className="font-mono text-xs mt-1 text-acid">— próximamente —</p>
       </div>
     </div>
   );
@@ -30,13 +42,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("habitos");
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a] font-sans">
+    <div className="min-h-screen bg-surface font-sans">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0f0f1a]/90 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-base font-black text-white tracking-tight">
-          Stark<span className="text-red-500">Lab</span>
+      <div className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-line px-4 py-3 flex items-center justify-between">
+        <h1 className="font-display text-lg text-fore tracking-tight uppercase">
+          Forge<span className="text-acid">Vault</span>
         </h1>
-        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+        <span className="font-mono text-[10px] text-muted uppercase tracking-widest">
           {TABS.find((t) => t.id === activeTab)?.label}
         </span>
       </div>
@@ -45,24 +57,27 @@ export default function App() {
       <main className="px-4 pt-5 pb-24 max-w-lg mx-auto">
         {activeTab === "habitos" && <Habits />}
         {activeTab === "finanzas" && <Finance />}
-        {activeTab === "gym" && <ComingSoon label="Gym" icon="🏋️" />}
-        {activeTab === "ahorros" && <ComingSoon label="Ahorros" icon="🎯" />}
+        {activeTab === "gym" && <ComingSoon label="Gym" Icon={Dumbbell} />}
+        {activeTab === "ahorros" && (
+          <ComingSoon label="Ahorros" Icon={PiggyBank} />
+        )}
+        {activeTab === "notas" && <Notes />}
       </main>
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#16162a]/95 backdrop-blur-md border-t border-white/5 flex justify-around px-2 py-2 z-40">
+      <nav className="fixed bottom-0 left-0 right-0 bg-surface2/95 backdrop-blur-md border-t border-line flex justify-around px-2 py-2 z-40">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-95 ${
-              activeTab === tab.id
-                ? "bg-red-500/15 text-red-400"
-                : "text-slate-600 hover:text-slate-400"
+              activeTab === tab.id ? "text-acid" : "text-muted hover:text-fore"
             }`}
           >
-            <span className="text-lg leading-none">{tab.icon}</span>
-            <span className="text-[10px] font-bold">{tab.label}</span>
+            <tab.Icon className="w-5 h-5" strokeWidth={1.5} />
+            <span className="font-mono text-[10px] uppercase tracking-wider">
+              {tab.label}
+            </span>
           </button>
         ))}
       </nav>
