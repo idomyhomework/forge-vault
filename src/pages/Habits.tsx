@@ -238,7 +238,7 @@ function AddHabitModal({
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Nombre del hábito"
-          className="w-full bg-card2 border border-line rounded-xl px-3 py-2 text-sm text-black placeholder-muted focus:outline-none focus:border-acid transition-colors"
+          className="w-full bg-card2 border border-line rounded-xl px-3 py-2 text-sm text-fore placeholder-muted focus:outline-none focus:border-acid transition-colors"
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
         />
 

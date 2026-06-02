@@ -132,7 +132,7 @@ function AddTransactionModal({
             placeholder="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-card2 rounded-xl pl-12 pr-4 py-3 text-black text-sm font-bold border border-line focus:outline-none focus:border-acid transition-colors"
+            className="w-full bg-card2 rounded-xl pl-12 pr-4 py-3 text-fore text-sm font-bold border border-line focus:outline-none focus:border-acid transition-colors"
           />
         </div>
 
@@ -142,7 +142,7 @@ function AddTransactionModal({
           placeholder="Descripción (opcional)"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
-          className="w-full bg-card2 rounded-xl px-4 py-3 text-black text-sm border border-line focus:outline-none focus:border-acid placeholder:text-muted transition-colors"
+          className="w-full bg-card2 rounded-xl px-4 py-3 text-fore text-sm border border-line focus:outline-none focus:border-acid placeholder:text-muted transition-colors"
         />
 
         {/* Category grid */}
@@ -247,7 +247,7 @@ function AddCategoryModal({
           placeholder="Nombre de la categoría"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full bg-card2 rounded-xl px-4 py-3 text-black text-sm border border-line focus:outline-none focus:border-acid placeholder:text-muted transition-colors"
+          className="w-full bg-card2 rounded-xl px-4 py-3 text-fore text-sm border border-line focus:outline-none focus:border-acid placeholder:text-muted transition-colors"
         />
 
         <div>
