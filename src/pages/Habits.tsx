@@ -4,64 +4,9 @@ import { ClipboardList } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 import { HABIT_ICON_MAP, HABIT_ICON_KEYS } from "../utils/icons";
+import { uid } from "../utils/uid";
+import { DAYS, XP_PER_CHECK, COLOR_PRESETS, INITIAL_HABITS } from "../utils/habitConstants";
 import type { Habit, WeekRecord } from "../types";
-
-// ── Constants ────────────────────────────────────────────────────────────────
-const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
-const XP_PER_CHECK = 25;
-
-// ── Color presets ────────────────────────────────────────────────────────────
-const COLOR_PRESETS = [
-  { color: "bg-sky-400", accentHex: "#38bdf8" },
-  { color: "bg-cyan-400", accentHex: "#22d3ee" },
-  { color: "bg-emerald-400", accentHex: "#34d399" },
-  { color: "bg-pink-400", accentHex: "#f472b6" },
-  { color: "bg-violet-400", accentHex: "#a78bfa" },
-  { color: "bg-orange-400", accentHex: "#fb923c" },
-  { color: "bg-yellow-400", accentHex: "#facc15" },
-  { color: "bg-rose-400", accentHex: "#fb7185" },
-];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function uid() {
-  return Math.random().toString(36).slice(2, 9);
-}
-
-// ── Initial habits ───────────────────────────────────────────────────────────
-const INITIAL_HABITS: Habit[] = [
-  {
-    id: "wake",
-    label: "Despertar a las 05:00",
-    icon: "clock",
-    color: "bg-sky-400",
-    accentHex: "#38bdf8",
-    checks: [false, false, false, false, false, false, false],
-  },
-  {
-    id: "gym",
-    label: "Gimnasio",
-    icon: "dumbbell",
-    color: "bg-cyan-400",
-    accentHex: "#22d3ee",
-    checks: [false, false, false, false, false, false, false],
-  },
-  {
-    id: "reading",
-    label: "Lectura / Aprendizaje",
-    icon: "bookOpen",
-    color: "bg-emerald-400",
-    accentHex: "#34d399",
-    checks: [false, false, false, false, false, false, false],
-  },
-  {
-    id: "planning",
-    label: "Planificación del día",
-    icon: "calendar",
-    color: "bg-pink-400",
-    accentHex: "#f472b6",
-    checks: [false, false, false, false, false, false, false],
-  },
-];
 
 // ── Sparkline chart ────────────────────────────────────────────────────────
 function ConsistencyChart({
@@ -90,7 +35,7 @@ function ConsistencyChart({
     .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
     .join(" ");
   const areaD = `${pathD} L ${pts[pts.length - 1].x} ${H} L ${pts[0].x} ${H} Z`;
-  const ease = "0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+  const TRANSITION = { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const };
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 72 }}>
@@ -100,30 +45,33 @@ function ConsistencyChart({
           <stop offset="100%" stopColor={accentHex} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path
+      <motion.path
         d={areaD}
+        animate={{ d: areaD }}
+        transition={TRANSITION}
         fill="url(#areaGradH)"
-        style={{ transition: `d ${ease}` }}
       />
-      <path
+      <motion.path
         d={pathD}
+        animate={{ d: pathD }}
+        transition={TRANSITION}
         fill="none"
         stroke={accentHex}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{ transition: `d ${ease}` }}
       />
       {pts.map((p, i) => (
-        <circle
+        <motion.circle
           key={i}
           cx={p.x}
           cy={p.y}
+          animate={{ cy: p.y }}
+          transition={TRANSITION}
           r="4"
           fill="#0a0a0c"
           stroke={accentHex}
           strokeWidth="2"
-          style={{ transition: `cy ${ease}` }}
         />
       ))}
       {pts.map((p, i) => (
@@ -177,9 +125,6 @@ function CheckBox({
     </button>
   );
 }
-
-// ── Icon options ─────────────────────────────────────────────────────────────
-const ICON_OPTIONS = HABIT_ICON_KEYS;
 
 // ── Add Habit Modal ────────────────────────────────────────────────────────
 function AddHabitModal({
@@ -248,7 +193,7 @@ function AddHabitModal({
             Icono
           </span>
           <div className="grid grid-cols-8 gap-1">
-            {ICON_OPTIONS.map((key) => {
+            {HABIT_ICON_KEYS.map((key) => {
               const Icon = HABIT_ICON_MAP[key];
               return (
                 <button

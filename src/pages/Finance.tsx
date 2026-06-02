@@ -4,29 +4,13 @@ import { Banknote } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 import { CATEGORY_ICON_MAP, CATEGORY_ICON_KEYS } from "../utils/icons";
+import { uid } from "../utils/uid";
+import { DEFAULT_CATEGORIES } from "../utils/financeConstants";
 import type { Transaction, Category, TransactionType } from "../types";
-
-// ── Default categories ─────────────────────────────────────────────────────
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: "salario", name: "Salario", icon: "banknote", type: "ingreso" },
-  { id: "freelance", name: "Freelance", icon: "laptop", type: "ingreso" },
-  { id: "comida", name: "Comida", icon: "utensils", type: "gasto" },
-  { id: "transporte", name: "Transporte", icon: "car", type: "gasto" },
-  { id: "ocio", name: "Ocio", icon: "gamepad", type: "gasto" },
-  { id: "streaming", name: "Streaming", icon: "tv", type: "gasto" },
-  { id: "salud", name: "Salud", icon: "heartPulse", type: "gasto" },
-];
-
-// ── Icon options ─────────────────────────────────────────────────────────────
-const EMOJI_OPTIONS = CATEGORY_ICON_KEYS;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
   return `US$ ${Math.abs(n).toLocaleString("es-ES", { minimumFractionDigits: 0 })}`;
-}
-
-function uid() {
-  return Math.random().toString(36).slice(2, 9);
 }
 
 // ── Stat Card ──────────────────────────────────────────────────────────────
@@ -255,7 +239,7 @@ function AddCategoryModal({
             Icono
           </p>
           <div className="grid grid-cols-10 gap-1">
-            {EMOJI_OPTIONS.map((key) => {
+            {CATEGORY_ICON_KEYS.map((key) => {
               const Icon = CATEGORY_ICON_MAP[key];
               return (
                 <button
