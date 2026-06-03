@@ -15,7 +15,7 @@ export default defineConfig({
         description: "Tu tracker personal de hábitos, finanzas y notas",
         theme_color: "#0a0a0c",
         background_color: "#0a0a0c",
-        display: "standalone",
+        display: "fullscreen",
         orientation: "portrait",
         scope: "/",
         start_url: "/",

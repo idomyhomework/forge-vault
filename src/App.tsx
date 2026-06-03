@@ -44,7 +44,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-surface font-sans">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-line px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-line px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] flex items-center justify-between">
         <h1 className="font-display text-lg text-fore tracking-tight uppercase">
           Forge<span className="text-acid">Vault</span>
         </h1>
