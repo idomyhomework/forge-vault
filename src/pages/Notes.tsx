@@ -139,12 +139,12 @@ function BlockEditor({
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted flex-shrink-0">
           {block.type === "text" ? "Txt" : "List"}
         </span>
-        <div className="flex items-center gap-1.5 flex-1">
+        <div className="flex items-center gap-1.5 flex-1 py-1">
           {COLORS.map((c) => (
             <button
               key={c.value}
               onClick={() => setColor(c.value)}
-              className="w-3.5 h-3.5 rounded-full flex-shrink-0 hover:scale-110 transition-transform"
+              className="w-3.5 h-3.5 mx-1 rounded-full flex-shrink-0 hover:scale-110 transition-transform"
               style={{
                 backgroundColor: c.hex,
                 boxShadow:
@@ -369,7 +369,10 @@ export default function Notes() {
       {/* Notes list */}
       {notes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <NotebookText className="w-12 h-12 opacity-20 text-muted" strokeWidth={1} />
+          <NotebookText
+            className="w-12 h-12 opacity-20 text-muted"
+            strokeWidth={1}
+          />
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
             Sin notas aún
           </p>

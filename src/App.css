@@ -8,8 +8,27 @@
     color: #e8e8ee;
     font-family: "Outfit", sans-serif;
     overflow-x: hidden;
+    scrollbar-width: none;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
   }
 }
+
+/* Gym module animations */
+@keyframes gym-pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+@keyframes gym-glow  { 0%,100% { box-shadow:0 0 10px #ff2e7422 } 50% { box-shadow:0 0 28px #ff2e74aa } }
+.gym-pulse { animation: gym-pulse 0.9s infinite; }
+.gym-glow  { animation: gym-glow  1.4s infinite; }
 
 /* Grain overlay */
 body::before {

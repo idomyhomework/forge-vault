@@ -10,6 +10,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Tab } from "./types";
 import Habits from "./pages/Habits";
 import Finance from "./pages/Finance";
+import Gym from "./pages/Gym";
 import Notes from "./pages/Notes";
 import "./App.css";
 
@@ -57,7 +58,7 @@ export default function App() {
       <main className="px-4 pt-5 pb-24 max-w-lg mx-auto">
         {activeTab === "habitos" && <Habits />}
         {activeTab === "finanzas" && <Finance />}
-        {activeTab === "gym" && <ComingSoon label="Gym" Icon={Dumbbell} />}
+        {activeTab === "gym" && <Gym />}
         {activeTab === "ahorros" && (
           <ComingSoon label="Ahorros" Icon={PiggyBank} />
         )}
