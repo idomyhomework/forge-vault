@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { calcSetCalories } from "../gymCalories";
+import { calcSetCalories, MET } from "../gymCalories";
 import type {
   UserProgramConfig,
   UserProgramDay,
@@ -47,6 +47,9 @@ export default function WorkoutSession({
   const finishedRef = useRef(false);
 
   const currentExercise = exercises[exerciseOrder[exIdx]];
+
+  // ── Bodyweight exercise detection ────────────────────────────────────────
+  const isBW = currentExercise.met === MET.bodyweight;
 
   // ── Live stopwatch during active set ────────────────────────────────────
   useEffect(() => {
@@ -101,9 +104,13 @@ export default function WorkoutSession({
   const handleRepsConfirm = () => {
     const reps = Math.max(1, parseInt(repsInput) || 1);
     const cal = calcSetCalories(currentExercise.met, bodyWeightKg, reps);
+    // For bodyweight exercises: stored weight = body weight + any extra added (e.g. vest).
+    // For weighted exercises: stored weight = entered weight.
+    const extraKg = parseFloat(weightInput) || 0;
+    const effectiveWeight = isBW ? bodyWeightKg + extraKg : extraKg;
     const record: SetRecord = {
       setNumber: setIdx + 1,
-      weightKg: parseFloat(weightInput) || 0,
+      weightKg: effectiveWeight,
       reps,
       durationSecs: pendingDurationRef.current,
       caloriesBurned: cal,
@@ -285,16 +292,21 @@ export default function WorkoutSession({
           <div className="px-4 pb-4 flex flex-col gap-3">
             <div>
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1.5">
-                Working weight (kg)
+                {isBW ? "Extra weight added (kg)" : "Working weight (kg)"}
               </label>
               <input
                 type="number"
                 value={weightInput}
                 onChange={(e) => setWeightInput(e.target.value)}
-                placeholder="0 = bodyweight"
+                placeholder={isBW ? "0 = bodyweight only" : "e.g. 60"}
                 className="w-full bg-card2 rounded-xl border border-line px-4 py-3 font-sans text-xl text-fore outline-none focus:border-acid/60 transition-colors text-center"
                 autoFocus
               />
+              {isBW && (
+                <p className="font-mono text-[9px] text-muted mt-1.5 text-center">
+                  Your body weight ({bodyWeightKg} kg) is included automatically
+                </p>
+              )}
             </div>
             <button
               onClick={handleStart}
@@ -317,7 +329,9 @@ export default function WorkoutSession({
                 {elapsed}s
               </p>
               <p className="font-mono text-[10px] text-muted mt-1 uppercase tracking-widest">
-                in progress · {weightInput || "0"} kg
+                {isBW
+                  ? `in progress · BW ${parseFloat(weightInput) > 0 ? `+ ${weightInput} kg` : `(${bodyWeightKg} kg)`}`
+                  : `in progress · ${weightInput || "0"} kg`}
               </p>
             </div>
             <button

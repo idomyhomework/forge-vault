@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useLocalStorage } from "../../../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../../../utils/storageKeys";
-import { getProgramById } from "../gymPrograms";
+import { ALL_PROGRAMS, getProgramById } from "../gymPrograms";
+import { MET } from "../gymCalories";
 import type {
   GymUserProfile,
   GymPreferences,
@@ -38,6 +39,46 @@ export function useGymData() {
     STORAGE_KEYS.gymSessions,
     [],
   );
+
+  // ── One-time bodyweight migration ────────────────────────────────────────
+  // Existing sessions stored weightKg=0 for bodyweight exercises. This
+  // migration sets them to the user's actual body weight so graphs are correct.
+  useEffect(() => {
+    const done = localStorage.getItem(STORAGE_KEYS.gymMigrationV1);
+    if (done) return;
+
+    const bw = profile?.bodyWeightKg ?? 70;
+
+    // Build a flat lookup: exerciseId → met value, from all built-in programs
+    const metByExId = new Map<string, number>();
+    for (const prog of ALL_PROGRAMS) {
+      for (const day of prog.days) {
+        for (const ex of day.exercises) {
+          metByExId.set(ex.id, ex.met);
+        }
+      }
+    }
+
+    setSessions((prev) =>
+      prev.map((session) => ({
+        ...session,
+        exercises: session.exercises.map((ex) => {
+          const met = metByExId.get(ex.exerciseId);
+          if (met !== MET.bodyweight) return ex;
+          return {
+            ...ex,
+            sets: ex.sets.map((set) =>
+              set.weightKg === 0 ? { ...set, weightKg: bw } : set,
+            ),
+          };
+        }),
+      })),
+    );
+
+    localStorage.setItem(STORAGE_KEYS.gymMigrationV1, "1");
+  // Intentionally run once on mount only
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const activeProgram = programs.find((p) => p.id === activeId) ?? null;

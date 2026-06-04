@@ -10,4 +10,5 @@ export const STORAGE_KEYS = {
   gymPrograms:      "gym_programs_v1",
   gymActiveId:      "gym_active_id_v1",
   gymSessions:      "gym_sessions_v1",
+  gymMigrationV1:   "gym_migration_bw_v1",
 } as const;
