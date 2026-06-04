@@ -17,14 +17,14 @@ export default function WorkoutSession({
   prefs,
   bodyWeightKg,
   onFinish,
-  onStop,
+  onDiscard,
 }: {
   config: UserProgramConfig;
   dayIndex: number;
   prefs: GymPreferences;
   bodyWeightKg: number;
   onFinish: (session: WSession) => void;
-  onStop: (session: WSession) => void;
+  onDiscard: () => void;
 }) {
   const day: UserProgramDay = config.days[dayIndex];
   const exercises = day.exercises.filter((e) => e.enabled);
@@ -35,12 +35,15 @@ export default function WorkoutSession({
   );
   const [exIdx, setExIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(0);
-  const [phase, setPhase] = useState<"weight" | "active" | "reps" | "rest" | "done">("weight");
+  const [phase, setPhase] = useState<
+    "weight" | "active" | "reps" | "rest" | "done"
+  >("weight");
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [completed, setCompleted] = useState<CompletedExercise[]>([]);
   const [sessionStart] = useState(Date.now());
+  const [showStopMenu, setShowStopMenu] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const setStartRef = useRef<number>(0);
   const pendingDurationRef = useRef<number>(0);
@@ -94,7 +97,10 @@ export default function WorkoutSession({
 
   // ── Finish a set (stopwatch → reps input) ────────────────────────────────
   const handleFinish = () => {
-    pendingDurationRef.current = Math.max(1, Math.round((Date.now() - setStartRef.current) / 1000));
+    pendingDurationRef.current = Math.max(
+      1,
+      Math.round((Date.now() - setStartRef.current) / 1000),
+    );
     setElapsed(0);
     setRepsInput("");
     setPhase("reps");
@@ -106,8 +112,10 @@ export default function WorkoutSession({
     const cal = calcSetCalories(currentExercise.met, bodyWeightKg, reps);
     // For bodyweight exercises: stored weight = body weight + any extra added (e.g. vest).
     // For weighted exercises: stored weight = entered weight.
-    const extraKg = parseFloat(weightInput) || 0;
-    const effectiveWeight = isBW ? bodyWeightKg + extraKg : extraKg;
+    const extraKg = Math.max(0, parseFloat(weightInput) || 0);
+    const effectiveWeight = isBW
+      ? bodyWeightKg + extraKg
+      : Math.max(1, extraKg);
     const record: SetRecord = {
       setNumber: setIdx + 1,
       weightKg: effectiveWeight,
@@ -187,8 +195,25 @@ export default function WorkoutSession({
     });
   };
 
-  // ── Stop early ───────────────────────────────────────────────────────────
-  const handleStop = () => onStop(buildSession(completed, true));
+  // ── Urgent finish with save ──────────────────────────────────────────────
+  const handleUrgentSave = useCallback(() => {
+    setCompleted((snap) => {
+      const remaining = exerciseOrder
+        .map((i) => exercises[i])
+        .filter((ex) => !snap.find((c) => c.exerciseId === ex.id));
+      const fullSnap: CompletedExercise[] = [
+        ...snap,
+        ...remaining.map((ex) => ({
+          exerciseId: ex.id,
+          exerciseName: ex.name,
+          muscle: ex.muscle,
+          sets: [] as SetRecord[],
+        })),
+      ];
+      onFinish(buildSession(fullSnap, false));
+      return snap;
+    });
+  }, [exerciseOrder, exercises, onFinish, buildSession]);
 
   // ── Auto-finish when phase becomes done ──────────────────────────────────
   useEffect(() => {
@@ -228,15 +253,42 @@ export default function WorkoutSession({
             {day.name}
           </h3>
           <p className="font-sans text-[11px] text-muted mt-0.5">
-            {exIdx + 1}/{exerciseOrder.length} exercises · {Math.round(totalKcal)} kcal
+            {exIdx + 1}/{exerciseOrder.length} exercises ·{" "}
+            {Math.round(totalKcal)} kcal
           </p>
         </div>
-        <button
-          onClick={handleStop}
-          className="shrink-0 px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-muted border border-line hover:text-crimson hover:border-crimson/40 transition-colors active:scale-95"
-        >
-          Stop
-        </button>
+        {showStopMenu ? (
+          <div className="flex flex-col gap-1.5 items-end shrink-0">
+            <div className="flex gap-1.5">
+              <button
+                onClick={onDiscard}
+                className="px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-crimson border border-crimson/40 hover:bg-crimson/10 transition-colors active:scale-95"
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleUrgentSave}
+                className="px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-surface transition-colors active:scale-95"
+                style={{ background: day.color }}
+              >
+                Finish
+              </button>
+            </div>
+            <button
+              onClick={() => setShowStopMenu(false)}
+              className="font-mono text-[9px] text-muted hover:text-fore transition-colors"
+            >
+              ↩ cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowStopMenu(true)}
+            className="shrink-0 px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-muted border border-line hover:text-crimson hover:border-crimson/40 transition-colors active:scale-95"
+          >
+            Stop
+          </button>
+        )}
       </div>
 
       {/* ── Active exercise card ──────────────────────────────────────── */}
@@ -256,13 +308,19 @@ export default function WorkoutSession({
               className="shrink-0 text-muted hover:text-red-400 transition-colors"
               title="Watch on YouTube"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
               </svg>
             </a>
           </div>
           <p className="font-sans text-[11px] text-muted mt-0.5">
-            {currentExercise.muscle} · {currentExercise.sets} sets × {currentExercise.reps}
+            {currentExercise.muscle} · {currentExercise.sets} sets ×{" "}
+            {currentExercise.reps}
           </p>
         </div>
 
@@ -296,9 +354,12 @@ export default function WorkoutSession({
               </label>
               <input
                 type="number"
+                min="0"
                 value={weightInput}
                 onChange={(e) => setWeightInput(e.target.value)}
-                placeholder={isBW ? "0 = bodyweight only" : "e.g. 60"}
+                placeholder={
+                  isBW ? "0 = bodyweight only" : "blank = saved as 1 kg"
+                }
                 className="w-full bg-card2 rounded-xl border border-line px-4 py-3 font-sans text-xl text-fore outline-none focus:border-acid/60 transition-colors text-center"
                 autoFocus
               />
@@ -360,7 +421,8 @@ export default function WorkoutSession({
                 autoFocus
               />
             </div>
-            {setIdx >= currentExercise.sets - 1 && exIdx >= exerciseOrder.length - 1 ? (
+            {setIdx >= currentExercise.sets - 1 &&
+            exIdx >= exerciseOrder.length - 1 ? (
               <button
                 onClick={handleRepsConfirm}
                 disabled={!repsInput}
@@ -443,8 +505,13 @@ export default function WorkoutSession({
                   title="Watch on YouTube"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
                   </svg>
                 </a>
                 {!isDone && !isCurrent && (

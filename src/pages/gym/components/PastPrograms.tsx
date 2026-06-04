@@ -19,6 +19,8 @@ export default function PastPrograms({
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // ── Selected day index per program (defaults to 0) ──────────────────────
+  const [dayFilters, setDayFilters] = useState<Record<string, number>>({});
 
   if (programs.length === 0) {
     return (
@@ -45,6 +47,10 @@ export default function PastPrograms({
         const template = getProgramById(cfg.programId);
         const color = template?.color ?? "#8b8b9a";
         const isExpanded = expandedId === cfg.id;
+        const selectedDay = dayFilters[cfg.id] ?? 0;
+        const chartSessions = completedSessions.filter(
+          (s) => s.dayIndex === selectedDay,
+        );
 
         return (
           <div
@@ -62,7 +68,10 @@ export default function PastPrograms({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: color }}
+                  />
                   <div className="min-w-0">
                     <p
                       className="font-display text-base tracking-wide leading-tight truncate"
@@ -84,26 +93,44 @@ export default function PastPrograms({
                       Active
                     </span>
                   )}
-                  <span className="text-muted text-sm">{isExpanded ? "▲" : "▼"}</span>
+                  <span className="text-muted text-sm">
+                    {isExpanded ? "▲" : "▼"}
+                  </span>
                 </div>
               </div>
 
               {/* ── Quick stats ────────────────────────────────────────── */}
               <div className="flex gap-4 mt-2">
                 <div>
-                  <p className="font-mono text-[9px] uppercase tracking-widest text-muted">Sessions</p>
-                  <p className="font-display text-lg leading-none" style={{ color }}>
+                  <p className="font-mono text-[9px] uppercase tracking-widest text-muted">
+                    Sessions
+                  </p>
+                  <p
+                    className="font-display text-lg leading-none"
+                    style={{ color }}
+                  >
                     {completedSessions.length}
                   </p>
                 </div>
                 <div>
-                  <p className="font-mono text-[9px] uppercase tracking-widest text-muted">Kcal</p>
-                  <p className="font-display text-lg leading-none" style={{ color }}>{totalKcal}</p>
+                  <p className="font-mono text-[9px] uppercase tracking-widest text-muted">
+                    Kcal
+                  </p>
+                  <p
+                    className="font-display text-lg leading-none"
+                    style={{ color }}
+                  >
+                    {totalKcal}
+                  </p>
                 </div>
                 {cfg.lastTrainedAt && (
                   <div>
-                    <p className="font-mono text-[9px] uppercase tracking-widest text-muted">Last</p>
-                    <p className="font-sans text-xs text-fore leading-none mt-0.5">{cfg.lastTrainedAt}</p>
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-muted">
+                      Last
+                    </p>
+                    <p className="font-sans text-xs text-fore leading-none mt-0.5">
+                      {cfg.lastTrainedAt}
+                    </p>
                   </div>
                 )}
               </div>
@@ -115,20 +142,61 @@ export default function PastPrograms({
                 {/* Day list */}
                 <div className="flex flex-col gap-1.5">
                   {cfg.days.map((d, i) => {
-                    const daySess = completedSessions.filter((s) => s.dayIndex === i).length;
+                    const daySess = completedSessions.filter(
+                      (s) => s.dayIndex === i,
+                    ).length;
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: d.color }} />
-                        <p className="font-sans text-xs text-muted flex-1 truncate">{d.name}</p>
-                        <span className="font-mono text-[9px] text-muted">{daySess}×</span>
+                        <div
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ background: d.color }}
+                        />
+                        <p className="font-sans text-xs text-muted flex-1 truncate">
+                          {d.name}
+                        </p>
+                        <span className="font-mono text-[9px] text-muted">
+                          {daySess}×
+                        </span>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Charts for this program */}
+                {/* ── Day filter tabs ────────────────────────────────── */}
                 {completedSessions.length > 0 && (
-                  <ProgressCharts sessions={completedSessions} color={color} />
+                  <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1">
+                    {cfg.days.map((d, i) => {
+                      const isSelected = selectedDay === i;
+                      const shortName = d.name.split("—")[0].trim();
+                      return (
+                        <button
+                          key={i}
+                          onClick={() =>
+                            setDayFilters((prev) => ({ ...prev, [cfg.id]: i }))
+                          }
+                          className="shrink-0 px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                          style={{
+                            background: isSelected
+                              ? d.color + "20"
+                              : "rgba(255,255,255,0.04)",
+                            color: isSelected ? d.color : "#8b8b9a",
+                            border: `1px solid ${isSelected ? d.color + "44" : "#2a2a35"}`,
+                          }}
+                        >
+                          {shortName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* ── Charts for selected day ──────────────────────────── */}
+                {completedSessions.length > 0 && (
+                  <ProgressCharts
+                    key={selectedDay}
+                    sessions={chartSessions}
+                    color={cfg.days[selectedDay].color}
+                  />
                 )}
 
                 {/* Switch button for non-active programs */}

@@ -62,9 +62,14 @@ export default function Gym() {
       : "#d4ff3f"
     : "#d4ff3f";
 
-  // -- Workout done/stop handlers --
+  // ── Workout handlers ─────────────────────────────────────────────────────
   const handleSessionEnd = (session: WSession) => {
     addSession(session);
+    setActiveWorkout(null);
+    setTab("workout");
+  };
+
+  const handleDiscard = () => {
     setActiveWorkout(null);
     setTab("workout");
   };
@@ -78,7 +83,7 @@ export default function Gym() {
         prefs={prefs}
         bodyWeightKg={profile.bodyWeightKg}
         onFinish={handleSessionEnd}
-        onStop={handleSessionEnd}
+        onDiscard={handleDiscard}
       />
     );
   }
