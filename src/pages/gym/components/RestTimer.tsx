@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // ── RestTimer component ────────────────────────────────────────────────────
 export default function RestTimer({
@@ -10,16 +10,23 @@ export default function RestTimer({
   onDone: () => void;
   onSkip: () => void;
 }) {
+  const finishAt = useRef(Date.now() + durationSecs * 1000);
   const [remaining, setRemaining] = useState(durationSecs);
 
+  // ── Wall-clock interval ──────────────────────────────────────────────────
   useEffect(() => {
-    if (remaining <= 0) {
-      onDone();
-      return;
-    }
-    const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
-    return () => clearTimeout(id);
-  }, [remaining, onDone]);
+    const id = setInterval(() => {
+      const left = Math.ceil((finishAt.current - Date.now()) / 1000);
+      if (left <= 0) {
+        clearInterval(id);
+        setRemaining(0);
+        onDone();
+        return;
+      }
+      setRemaining(left);
+    }, 500);
+    return () => clearInterval(id);
+  }, [onDone]);
 
   // ── SVG ring geometry ────────────────────────────────────────────────────
   const circ = 2 * Math.PI * 44;

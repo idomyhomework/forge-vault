@@ -60,7 +60,10 @@ export default function WorkoutSession({
       clearInterval(timerRef.current ?? undefined);
       return;
     }
-    timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    timerRef.current = setInterval(
+      () => setElapsed(Math.round((Date.now() - setStartRef.current) / 1000)),
+      500,
+    );
     return () => clearInterval(timerRef.current ?? undefined);
   }, [phase]);
 
