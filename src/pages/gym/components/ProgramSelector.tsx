@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ALL_PROGRAMS } from "../gymPrograms";
+import { ALL_PROGRAMS, buildProgramConfig } from "../gymPrograms";
 import type { Gender, GymUserProfile, UserProgramConfig } from "../gymTypes";
 import ProgramCard from "./ProgramCard";
 
@@ -36,32 +36,12 @@ export default function ProgramSelector({
   const handleFinish = () => {
     if (!selected) return;
     const daysPerWeek = Math.min(scheduledDays.length, selected.daysOptions[0]);
-    const config: UserProgramConfig = {
-      id: crypto.randomUUID(),
-      programId: selected.id,
-      programName: selected.name,
+    const config = buildProgramConfig(
+      selected.id,
       daysPerWeek,
-      scheduledWeekDays: scheduledDays.slice(0, daysPerWeek),
-      days: selected.days.slice(0, daysPerWeek).map((d) => ({
-        label: d.label,
-        name: d.name,
-        focus: d.focus,
-        color: d.color,
-        exercises: d.exercises
-          .filter((e) => e.rec)
-          .map((e) => ({
-            id: e.id,
-            name: e.name,
-            muscle: e.muscle,
-            sets: e.sets,
-            reps: e.reps,
-            notes: e.notes,
-            met: e.met,
-            enabled: true,
-          })),
-      })),
-      startedAt: new Date().toISOString().slice(0, 10),
-    };
+      scheduledDays.slice(0, daysPerWeek),
+    );
+    if (!config) return;
     onComplete({ gender, bodyWeightKg: parseFloat(bodyWeight) || 75 }, config);
   };
 

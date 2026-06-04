@@ -1,5 +1,5 @@
 import { MET } from "./gymCalories";
-import type { TrainingProgram } from "./gymTypes";
+import type { TrainingProgram, UserProgramConfig, UserProgramDay } from "./gymTypes";
 
 // ── Color palette per program ──────────────────────────────────────────────
 const C = {
@@ -664,4 +664,43 @@ export const ALL_PROGRAMS: TrainingProgram[] = [
 // ── Helpers ────────────────────────────────────────────────────────────────
 export function getProgramById(id: string): TrainingProgram | undefined {
   return ALL_PROGRAMS.find((p) => p.id === id);
+}
+
+// ── Build a UserProgramConfig from a template ──────────────────────────────
+export function buildProgramConfig(
+  programId: string,
+  daysPerWeek: number,
+  scheduledWeekDays: number[],
+): UserProgramConfig | null {
+  const template = getProgramById(programId);
+  if (!template) return null;
+  const days: UserProgramDay[] = template.days
+    .slice(0, daysPerWeek)
+    .map((d) => ({
+      label: d.label,
+      name: d.name,
+      focus: d.focus,
+      color: d.color,
+      exercises: d.exercises
+        .filter((e) => e.rec)
+        .map((e) => ({
+          id: e.id,
+          name: e.name,
+          muscle: e.muscle,
+          sets: e.sets,
+          reps: e.reps,
+          notes: e.notes,
+          met: e.met,
+          enabled: true,
+        })),
+    }));
+  return {
+    id: crypto.randomUUID(),
+    programId,
+    programName: template.name,
+    daysPerWeek,
+    scheduledWeekDays,
+    days,
+    startedAt: new Date().toISOString().slice(0, 10),
+  };
 }

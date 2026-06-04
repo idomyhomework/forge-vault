@@ -30,7 +30,7 @@ function BlockPreview({ block }: { block: NoteBlock }) {
     <ul className="flex flex-col gap-0.5">
       {block.items.slice(0, 3).map((item, i) => (
         <li
-          key={i}
+          key={`${block.id}-${i}`}
           className="flex items-start gap-1.5 text-sm"
           style={{ color: COLOR_HEX[block.color] }}
         >
@@ -86,7 +86,7 @@ function BlockEditor({
       ) : (
         <div className="flex flex-col gap-1.5">
           {block.items.map((item, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={`${block.id}-${i}`} className="flex items-center gap-2">
               <span
                 className="text-sm flex-shrink-0"
                 style={{ color: "#8b8b9a" }}

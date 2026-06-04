@@ -8,6 +8,7 @@ export const MUSCLE_COLORS: Record<string, string> = {
   Lats: "#00C6FF",
   Biceps: "#A78BFA",
   Shoulder: "#FF6B6B",
+  Shoulders: "#FF6B6B",
   Chest: "#FB923C",
   Triceps: "#FCD34D",
   Quads: "#A8FF78",
@@ -17,6 +18,7 @@ export const MUSCLE_COLORS: Record<string, string> = {
   Back: "#FB923C",
   "Rear Delt": "#E879F9",
   Traps: "#FCD34D",
+  Core: "#94A3B8",
 };
 
 // ── Day metadata ────────────────────────────────────────────────────────────

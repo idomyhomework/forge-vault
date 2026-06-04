@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { HABIT_ICON_MAP } from "../../utils/icons";
 import { XP_PER_CHECK } from "../../utils/habitConstants";
+import HabitIcon from "./HabitIcon";
 import type { WeekRecord } from "../../types";
 
 // ── Week History Modal ─────────────────────────────────────────────────────
@@ -84,10 +84,7 @@ export default function HistoryModal({
                           key={h.id}
                           className="flex items-center gap-1 bg-card border border-line rounded-lg px-2 py-1"
                         >
-                          {(() => {
-                            const Icon = HABIT_ICON_MAP[h.icon];
-                            return Icon ? <Icon className="w-3.5 h-3.5" /> : null;
-                          })()}
+                          <HabitIcon icon={h.icon} />
                           <span
                             className="font-mono text-[10px]"
                             style={{ color: h.accentHex }}

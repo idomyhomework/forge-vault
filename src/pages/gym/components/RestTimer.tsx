@@ -10,11 +10,13 @@ export default function RestTimer({
   onDone: () => void;
   onSkip: () => void;
 }) {
-  const finishAt = useRef(Date.now() + durationSecs * 1000);
+  const finishAt = useRef(0);
   const [remaining, setRemaining] = useState(durationSecs);
 
   // ── Wall-clock interval ──────────────────────────────────────────────────
   useEffect(() => {
+    // Anchor the deadline here (an effect, not render) so Date.now() stays pure.
+    finishAt.current = Date.now() + durationSecs * 1000;
     const id = setInterval(() => {
       const left = Math.ceil((finishAt.current - Date.now()) / 1000);
       if (left <= 0) {
@@ -26,7 +28,7 @@ export default function RestTimer({
       setRemaining(left);
     }, 500);
     return () => clearInterval(id);
-  }, [onDone]);
+  }, [durationSecs, onDone]);
 
   // ── SVG ring geometry ────────────────────────────────────────────────────
   const circ = 2 * Math.PI * 44;

@@ -3,12 +3,12 @@ import { AnimatePresence } from "framer-motion";
 import { ClipboardList } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../utils/storageKeys";
-import { HABIT_ICON_MAP } from "../utils/icons";
 import { uid } from "../utils/uid";
 import { DAYS, XP_PER_CHECK, INITIAL_HABITS } from "../utils/habitConstants";
 import type { Habit, WeekRecord } from "../types";
 import ConsistencyChart from "./habits/ConsistencyChart";
 import CheckBox from "./habits/CheckBox";
+import HabitIcon from "./habits/HabitIcon";
 import AddHabitModal from "./habits/AddHabitModal";
 import HistoryModal from "./habits/HistoryModal";
 
@@ -166,7 +166,7 @@ export default function Habits() {
               </button>
             )}
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {(() => { const Icon = HABIT_ICON_MAP[habit.icon]; return Icon ? <Icon className="w-4 h-4 flex-shrink-0 text-fore" /> : null; })()}
+              <HabitIcon icon={habit.icon} className="w-4 h-4 flex-shrink-0 text-fore" />
               <span className="text-sm font-medium text-fore truncate">
                 {habit.label}
               </span>

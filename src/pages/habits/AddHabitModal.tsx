@@ -4,6 +4,9 @@ import { HABIT_ICON_MAP, HABIT_ICON_KEYS } from "../../utils/icons";
 import { COLOR_PRESETS } from "../../utils/habitConstants";
 import type { Habit } from "../../types";
 
+// ── Every new habit uses the same cyan accent (COLOR_PRESETS[1] = bg-cyan-400) ──
+const HABIT_COLOR = COLOR_PRESETS[1];
+
 // ── Add Habit Modal ────────────────────────────────────────────────────────
 export default function AddHabitModal({
   onAdd,
@@ -14,15 +17,14 @@ export default function AddHabitModal({
 }) {
   const [label, setLabel] = useState("");
   const [icon, setIcon] = useState("clock");
-  const [colorIdx] = useState(0);
 
   const handleSubmit = () => {
     if (!label.trim()) return;
     onAdd({
       label: label.trim(),
       icon,
-      color: COLOR_PRESETS[colorIdx].color,
-      accentHex: COLOR_PRESETS[colorIdx].accentHex,
+      color: HABIT_COLOR.color,
+      accentHex: HABIT_COLOR.accentHex,
     });
     onClose();
   };
@@ -103,7 +105,7 @@ export default function AddHabitModal({
             onClick={handleSubmit}
             disabled={!label.trim()}
             className="flex-1 py-2.5 rounded-xl font-display text-sm uppercase tracking-wide text-surface transition-opacity disabled:opacity-40"
-            style={{ backgroundColor: COLOR_PRESETS[colorIdx].accentHex }}
+            style={{ backgroundColor: HABIT_COLOR.accentHex }}
           >
             Crear
           </button>

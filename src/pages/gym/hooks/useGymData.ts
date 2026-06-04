@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useLocalStorage } from "../../../hooks/useLocalStorage";
 import { STORAGE_KEYS } from "../../../utils/storageKeys";
-import { ALL_PROGRAMS, getProgramById } from "../gymPrograms";
+import { ALL_PROGRAMS, buildProgramConfig } from "../gymPrograms";
 import { MET } from "../gymCalories";
 import type {
   GymUserProfile,
@@ -105,17 +105,21 @@ export function useGymData() {
 
   const deleteProgram = useCallback(
     (configId: string) => {
-      setPrograms((prev) => {
-        const remaining = prev.filter((p) => p.id !== configId);
-        setActiveId((cur) => {
-          if (cur !== configId) return cur;
-          return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
-        });
-        return remaining;
-      });
+      // Compute next state up front, then call each setter independently —
+      // calling setActiveId inside the setPrograms updater is impure and can
+      // fire twice under StrictMode / concurrent rendering.
+      const remaining = programs.filter((p) => p.id !== configId);
+      const nextActiveId =
+        activeId !== configId
+          ? activeId
+          : remaining.length > 0
+            ? remaining[remaining.length - 1].id
+            : null;
+      setPrograms(remaining);
+      setActiveId(nextActiveId);
       setSessions((prev) => prev.filter((s) => s.configId !== configId));
     },
-    [setPrograms, setSessions, setActiveId],
+    [programs, activeId, setPrograms, setSessions, setActiveId],
   );
 
   const updateProgram = useCallback(
@@ -170,39 +174,8 @@ export function useGymData() {
       programId: string,
       daysPerWeek: number,
       scheduledWeekDays: number[],
-    ): UserProgramConfig | null => {
-      const template = getProgramById(programId);
-      if (!template) return null;
-      const days: UserProgramDay[] = template.days
-        .slice(0, daysPerWeek)
-        .map((d) => ({
-          label: d.label,
-          name: d.name,
-          focus: d.focus,
-          color: d.color,
-          exercises: d.exercises
-            .filter((e) => e.rec)
-            .map((e) => ({
-              id: e.id,
-              name: e.name,
-              muscle: e.muscle,
-              sets: e.sets,
-              reps: e.reps,
-              notes: e.notes,
-              met: e.met,
-              enabled: true,
-            })),
-        }));
-      return {
-        id: crypto.randomUUID(),
-        programId,
-        programName: template.name,
-        daysPerWeek,
-        scheduledWeekDays,
-        days,
-        startedAt: new Date().toISOString().slice(0, 10),
-      };
-    },
+    ): UserProgramConfig | null =>
+      buildProgramConfig(programId, daysPerWeek, scheduledWeekDays),
     [],
   );
 

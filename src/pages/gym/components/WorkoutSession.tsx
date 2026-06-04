@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { calcSetCalories, MET } from "../gymCalories";
+import YouTubeIcon from "./YouTubeIcon";
 import type {
   UserProgramConfig,
   UserProgramDay,
@@ -220,16 +221,17 @@ export default function WorkoutSession({
 
   // ── Auto-finish when phase becomes done ──────────────────────────────────
   useEffect(() => {
-    if (phase === "done" && !finishedRef.current) {
-      finishedRef.current = true;
-      // Use setTimeout so state has flushed
-      setTimeout(() => {
-        setCompleted((snap) => {
-          onFinish(buildSession(snap, false));
-          return snap;
-        });
-      }, 0);
-    }
+    if (phase !== "done" || finishedRef.current) return;
+    finishedRef.current = true;
+    // Defer one tick so the final set state has flushed before snapshotting.
+    // Cancel on unmount so onFinish can't fire on a dead component.
+    const id = setTimeout(() => {
+      setCompleted((snap) => {
+        onFinish(buildSession(snap, false));
+        return snap;
+      });
+    }, 0);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -311,14 +313,7 @@ export default function WorkoutSession({
               className="shrink-0 text-muted hover:text-red-400 transition-colors"
               title="Watch on YouTube"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
-              </svg>
+              <YouTubeIcon size={18} />
             </a>
           </div>
           <p className="font-sans text-[11px] text-muted mt-0.5">
@@ -508,14 +503,7 @@ export default function WorkoutSession({
                   title="Watch on YouTube"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
-                  </svg>
+                  <YouTubeIcon />
                 </a>
                 {!isDone && !isCurrent && (
                   <div className="flex flex-col gap-0.5 shrink-0">
