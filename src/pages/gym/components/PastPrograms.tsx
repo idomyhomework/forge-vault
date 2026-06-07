@@ -17,7 +17,8 @@ export default function PastPrograms({
   onSwitch: (configId: string) => void;
   onDelete: (configId: string) => void;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // ── Active program starts expanded so charts are visible immediately ────
+  const [expandedId, setExpandedId] = useState<string | null>(activeId);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   // ── Selected day index per program (defaults to 0) ──────────────────────
   const [dayFilters, setDayFilters] = useState<Record<string, number>>({});

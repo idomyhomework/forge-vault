@@ -15,6 +15,9 @@ export interface ExerciseDef {
   notes: string;
   met: number;
   rec?: boolean;
+  // Isometric / time-based exercise (plank, L-sit…): tracked in seconds held,
+  // not repetitions. When omitted, derived from the reps string ("60s" → true).
+  isTimed?: boolean;
 }
 
 // ── Day definition inside a built-in program ──────────────────────────────
@@ -49,6 +52,8 @@ export interface UserExercise {
   notes: string;
   met: number;
   enabled: boolean;
+  // Tracked in seconds held instead of reps (plank, hollow-body hold…).
+  isTimed?: boolean;
 }
 
 // ── User-customized day ────────────────────────────────────────────────────
@@ -98,6 +103,9 @@ export interface CompletedExercise {
   exerciseName: string;
   muscle: string;
   sets: SetRecord[];
+  // Snapshot of the exercise's timed flag at session time, so history and
+  // charts know to read seconds (durationSecs) instead of reps.
+  isTimed?: boolean;
 }
 
 export interface WorkoutSession {

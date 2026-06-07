@@ -13,6 +13,25 @@ export function calcSetCalories(
   return Math.round(met * bodyWeightKg * hours * 10) / 10;
 }
 
+// ── Timed-exercise calorie estimation ──────────────────────────────────────
+// Isometric holds (plank, L-sit…) are measured in seconds, so calories come
+// straight from the actual hold duration rather than a reps × 3s estimate.
+export function calcTimedCalories(
+  met: number,
+  bodyWeightKg: number,
+  durationSecs: number,
+): number {
+  const hours = durationSecs / 3600;
+  return Math.round(met * bodyWeightKg * hours * 10) / 10;
+}
+
+// ── Detect a time-based exercise from its reps string ──────────────────────
+// Holds encode their target in seconds ("60s", "30–45s", "10–20s"). Used to
+// auto-derive isTimed when an exercise has no explicit flag set.
+export function isTimedReps(reps: string): boolean {
+  return /s\s*$/i.test(reps.trim());
+}
+
 // ── MET reference values ───────────────────────────────────────────────────
 export const MET = {
   compoundHeavy:  5.0,

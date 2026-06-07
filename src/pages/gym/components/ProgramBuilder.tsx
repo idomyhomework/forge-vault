@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getProgramById } from "../gymPrograms";
+import { isTimedReps } from "../gymCalories";
 import { MUSCLE_COLORS } from "../gymData";
 import YouTubeIcon from "./YouTubeIcon";
 import type { UserProgramConfig, UserProgramDay, UserExercise } from "../gymTypes";
@@ -50,6 +51,25 @@ export default function ProgramBuilder({
     setDirty(true);
   };
 
+  // ── Toggle timed (seconds) vs reps tracking ──────────────────────────────
+  const toggleTimed = (exId: string) => {
+    setDays((prev) =>
+      prev.map((d, di) =>
+        di !== activeDayIdx
+          ? d
+          : {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exId
+                  ? { ...e, isTimed: !(e.isTimed ?? isTimedReps(e.reps)) }
+                  : e,
+              ),
+            },
+      ),
+    );
+    setDirty(true);
+  };
+
   // ── Add an exercise from the template pool ───────────────────────────────
   const addExercise = (ex: UserExercise) => {
     if (activeDay.exercises.some((e) => e.id === ex.id)) return;
@@ -75,6 +95,7 @@ export default function ProgramBuilder({
                 id: e.id, name: e.name, muscle: e.muscle,
                 sets: e.sets, reps: e.reps, notes: e.notes, met: e.met,
                 enabled: true,
+                isTimed: e.isTimed ?? isTimedReps(e.reps),
               })),
             },
       ),
@@ -90,6 +111,7 @@ export default function ProgramBuilder({
       id: te.id, name: te.name, muscle: te.muscle,
       sets: te.sets, reps: te.reps, notes: te.notes, met: te.met,
       enabled: true,
+      isTimed: te.isTimed ?? isTimedReps(te.reps),
     }));
 
   return (
@@ -137,6 +159,7 @@ export default function ProgramBuilder({
       <div className="flex flex-col gap-2">
         {activeDay.exercises.map((ex) => {
           const mc = MUSCLE_COLORS[ex.muscle] ?? "#8b8b9a";
+          const timed = ex.isTimed ?? isTimedReps(ex.reps);
           return (
             <div
               key={ex.id}
@@ -178,8 +201,21 @@ export default function ProgramBuilder({
                 >
                   {ex.muscle}
                 </span>
+                {/* ── Timed (seconds) vs reps toggle ────────────────── */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleTimed(ex.id); }}
+                  className="ml-auto px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-colors"
+                  style={
+                    timed
+                      ? { background: activeDay.color + "22", color: activeDay.color }
+                      : { background: "rgba(255,255,255,0.06)", color: "#8b8b9a" }
+                  }
+                  title="Toggle seconds vs reps tracking"
+                >
+                  {timed ? "⏱ Timed" : "↻ Reps"}
+                </button>
                 {/* ── Sets stepper ──────────────────────────────────── */}
-                <div className="flex items-center gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => updateSets(ex.id, -1)}
                     className="w-5 h-5 rounded bg-white/5 text-muted hover:text-fore text-[11px] flex items-center justify-center transition-colors"

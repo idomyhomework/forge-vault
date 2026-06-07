@@ -103,8 +103,11 @@ export default function ProgressCharts({
   color: string;
 }) {
   const [period, setPeriod] = useState<Period>("30d");
-  const [tab, setTab] = useState<"weight" | "calories" | "volume">("weight");
+  const [tab, setTab] = useState<"weight" | "reps" | "calories" | "volume">(
+    "weight",
+  );
   const [selectedExercise, setSelectedExercise] = useState("");
+  const [selectedSetIdx, setSelectedSetIdx] = useState(0);
 
   // ── Filter by period ─────────────────────────────────────────────────────
   const cutoff = useMemo(() => {
@@ -148,8 +151,52 @@ export default function ProgressCharts({
     [filtered],
   );
 
-  const volumeData = useMemo(() => {
+  // ── Is the selected exercise time-based? ─────────────────────────────────
+  // Read from the most recent session that logged it (isTimed snapshot).
+  const exTimed = useMemo(() => {
+    if (!exercise) return false;
+    for (let i = filtered.length - 1; i >= 0; i--) {
+      const ex = filtered[i].exercises.find((e) => e.exerciseName === exercise);
+      if (ex) return ex.isTimed ?? false;
+    }
+    return false;
+  }, [filtered, exercise]);
+
+  // ── Average reps (or seconds) per set, one point per session ─────────────
+  const repsData = useMemo(() => {
     if (!exercise) return [];
+    return filtered
+      .filter((s) =>
+        s.exercises.some(
+          (e) => e.exerciseName === exercise && e.sets.length > 0,
+        ),
+      )
+      .map((s) => {
+        const ex = s.exercises.find((e) => e.exerciseName === exercise)!;
+        const total = ex.sets.reduce(
+          (sum, set) => sum + (exTimed ? set.durationSecs : set.reps),
+          0,
+        );
+        return {
+          date: s.date.slice(5),
+          value: Math.round(total / ex.sets.length),
+        };
+      });
+  }, [filtered, exercise, exTimed]);
+
+  // ── Sets of the exercise's most recent session (for the set buttons) ─────
+  const latestSets = useMemo(() => {
+    if (!exercise) return [];
+    for (let i = filtered.length - 1; i >= 0; i--) {
+      const ex = filtered[i].exercises.find((e) => e.exerciseName === exercise);
+      if (ex && ex.sets.length > 0) return ex.sets;
+    }
+    return [];
+  }, [filtered, exercise]);
+
+  const volumeData = useMemo(() => {
+    // Volume (weight × reps) is meaningless for timed holds.
+    if (!exercise || exTimed) return [];
     return filtered
       .filter((s) => s.exercises.some((e) => e.exerciseName === exercise))
       .map((s) => {
@@ -157,12 +204,37 @@ export default function ProgressCharts({
         const vol = ex.sets.reduce((sum, set) => sum + set.weightKg * (set.reps ?? 0), 0);
         return { date: s.date.slice(5), value: Math.round(vol) };
       });
-  }, [filtered, exercise]);
+  }, [filtered, exercise, exTimed]);
 
   const chartData =
-    tab === "weight" ? weightData : tab === "calories" ? calorieData : volumeData;
-  const chartUnit = tab === "weight" ? "kg" : tab === "calories" ? "kcal" : "kg·sets";
-  const chartColor = tab === "weight" ? "#00C6FF" : tab === "calories" ? "#FF6B6B" : "#A8FF78";
+    tab === "weight"
+      ? weightData
+      : tab === "reps"
+        ? repsData
+        : tab === "calories"
+          ? calorieData
+          : volumeData;
+  const chartUnit =
+    tab === "weight"
+      ? "kg"
+      : tab === "reps"
+        ? exTimed
+          ? "s"
+          : "reps"
+        : tab === "calories"
+          ? "kcal"
+          : "kg·sets";
+  const chartColor =
+    tab === "weight"
+      ? "#00C6FF"
+      : tab === "reps"
+        ? "#FFD166"
+        : tab === "calories"
+          ? "#FF6B6B"
+          : "#A8FF78";
+
+  // ── Keep the selected set index within the latest session's range ────────
+  const safeSetIdx = selectedSetIdx < latestSets.length ? selectedSetIdx : 0;
 
   if (sessions.length === 0) {
     return (
@@ -194,7 +266,7 @@ export default function ProgressCharts({
 
       {/* ── Metric tabs ───────────────────────────────────────────────── */}
       <div className="flex gap-1 bg-card rounded-2xl border border-line p-1">
-        {(["weight", "calories", "volume"] as const).map((t) => (
+        {(["weight", "reps", "calories", "volume"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -204,7 +276,13 @@ export default function ProgressCharts({
               color: tab === t ? "#e8e8ee" : "#8b8b9a",
             }}
           >
-            {t === "weight" ? "Weight" : t === "calories" ? "Kcal" : "Volume"}
+            {t === "weight"
+              ? "Weight"
+              : t === "reps"
+                ? "Reps"
+                : t === "calories"
+                  ? "Kcal"
+                  : "Volume"}
           </button>
         ))}
       </div>
@@ -221,16 +299,22 @@ export default function ProgressCharts({
       {/* ── Chart ─────────────────────────────────────────────────────── */}
       {chartData.length === 0 ? (
         <div className="text-center py-10 text-muted">
-          <p className="font-sans text-sm">No data for this period.</p>
+          <p className="font-sans text-sm">
+            {tab === "volume" && exTimed
+              ? "Volume isn't tracked for timed holds — see the Reps tab for seconds."
+              : "No data for this period."}
+          </p>
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-line px-2 py-4">
           <p className="font-mono text-[9px] uppercase tracking-widest text-muted px-2 mb-3">
             {tab === "weight"
               ? `Peak weight — ${exercise}`
-              : tab === "calories"
-                ? "Calories per session"
-                : `Volume — ${exercise}`}
+              : tab === "reps"
+                ? `${exTimed ? "Avg hold per set" : "Avg reps per set"} — ${exercise}`
+                : tab === "calories"
+                  ? "Calories per session"
+                  : `Volume — ${exercise}`}
           </p>
           <ResponsiveContainer width="100%" height={180}>
             {tab === "calories" ? (
@@ -251,6 +335,39 @@ export default function ProgressCharts({
               </LineChart>
             )}
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ── Per-set breakdown (latest session) ────────────────────────── */}
+      {tab === "reps" && latestSets.length > 0 && (
+        <div className="bg-card rounded-2xl border border-line px-3 py-3">
+          <p className="font-mono text-[9px] uppercase tracking-widest text-muted mb-2">
+            Last session — tap a set
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {latestSets.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedSetIdx(i)}
+                className="px-3 py-1.5 rounded-lg font-mono text-[10px] uppercase tracking-wider transition-all active:scale-95"
+                style={{
+                  background: safeSetIdx === i ? color + "20" : "rgba(255,255,255,0.04)",
+                  color: safeSetIdx === i ? color : "#8b8b9a",
+                }}
+              >
+                Set {i + 1}
+              </button>
+            ))}
+          </div>
+          <p className="font-display text-base text-fore">
+            Set {safeSetIdx + 1} —{" "}
+            {exTimed
+              ? `${latestSets[safeSetIdx].durationSecs}s hold`
+              : `${latestSets[safeSetIdx].reps} reps`}
+            <span className="font-sans text-[11px] text-muted ml-1.5">
+              @ {latestSets[safeSetIdx].weightKg} kg
+            </span>
+          </p>
         </div>
       )}
 

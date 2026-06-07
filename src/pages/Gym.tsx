@@ -4,7 +4,6 @@ import ProgramSelector from "./gym/components/ProgramSelector";
 import ProgramView from "./gym/components/ProgramView";
 import ProgramBuilder from "./gym/components/ProgramBuilder";
 import WorkoutSession from "./gym/components/WorkoutSession";
-import ProgressCharts from "./gym/components/ProgressCharts";
 import PastPrograms from "./gym/components/PastPrograms";
 import HiitView from "./gym/components/HiitView";
 import type {
@@ -18,7 +17,6 @@ const GYM_TABS = [
   { id: "workout", label: "Workout" },
   { id: "progress", label: "Progress" },
   { id: "customize", label: "Customize" },
-  { id: "history", label: "History" },
   { id: "hiit", label: "HIIT" },
 ] as const;
 type GymTab = (typeof GYM_TABS)[number]["id"];
@@ -56,7 +54,6 @@ export default function Gym() {
     activeProgram && !dismissedIncomplete
       ? getLastIncompleteSession(activeProgram.id)
       : null;
-  const activeColor = "#d4ff3f";
 
   // ── Workout handlers ─────────────────────────────────────────────────────
   const handleSessionEnd = (session: WSession) => {
@@ -142,24 +139,14 @@ export default function Gym() {
           <div className="text-center py-16 text-muted">
             <div className="text-4xl mb-3">🏋️</div>
             <p className="font-sans text-sm mb-4">
-              No active program. Go to History to switch.
+              No active program. Go to Progress to switch.
             </p>
             <button
-              onClick={() => setTab("history")}
+              onClick={() => setTab("progress")}
               className="px-6 py-2.5 rounded-xl font-display text-base tracking-widest text-surface bg-acid active:scale-95"
             >
-              View History
+              View Progress
             </button>
-          </div>
-        ))}
-
-      {/* -- Progress tab -- */}
-      {tab === "progress" &&
-        (activeProgram ? (
-          <ProgressCharts sessions={activeSessions} color={activeColor} />
-        ) : (
-          <div className="text-center py-16 text-muted">
-            <p className="font-sans text-sm">No active program.</p>
           </div>
         ))}
 
@@ -176,8 +163,8 @@ export default function Gym() {
           </div>
         ))}
 
-      {/* -- History tab -- */}
-      {tab === "history" && (
+      {/* -- Progress tab (program history + per-day charts) -- */}
+      {tab === "progress" && (
         <div className="flex flex-col gap-4">
           <PastPrograms
             programs={programs}

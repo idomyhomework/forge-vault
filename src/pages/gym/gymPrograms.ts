@@ -1,4 +1,4 @@
-import { MET } from "./gymCalories";
+import { MET, isTimedReps } from "./gymCalories";
 import type { TrainingProgram, UserProgramConfig, UserProgramDay } from "./gymTypes";
 
 // ── Color palette per program ──────────────────────────────────────────────
@@ -692,6 +692,7 @@ export function buildProgramConfig(
           notes: e.notes,
           met: e.met,
           enabled: true,
+          isTimed: e.isTimed ?? isTimedReps(e.reps),
         })),
     }));
   return {

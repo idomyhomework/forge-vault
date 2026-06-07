@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { calcSetCalories, MET } from "../gymCalories";
+import {
+  calcSetCalories,
+  calcTimedCalories,
+  isTimedReps,
+  MET,
+} from "../gymCalories";
 import YouTubeIcon from "./YouTubeIcon";
 import type {
   UserProgramConfig,
@@ -44,16 +49,41 @@ export default function WorkoutSession({
   const [elapsed, setElapsed] = useState(0);
   const [completed, setCompleted] = useState<CompletedExercise[]>([]);
   const [sessionStart] = useState(Date.now());
-  const [showStopMenu, setShowStopMenu] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  // ── Per-workout rest setup (chosen before the workout starts) ─────────────
+  // Defaults to the saved global preference; changes here are session-only.
+  const [restConfigured, setRestConfigured] = useState(false);
+  const [sessionRestSecs, setSessionRestSecs] = useState(
+    prefs.restDurationSecs,
+  );
+  const [restOff, setRestOff] = useState(!prefs.showRestTimer);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const setStartRef = useRef<number>(0);
   const pendingDurationRef = useRef<number>(0);
   const finishedRef = useRef(false);
 
+  // ── Mirror completed → ref ───────────────────────────────────────────────
+  // Lets the finish paths read the latest snapshot WITHOUT calling onFinish
+  // from inside a setCompleted updater. Updater functions must stay pure —
+  // StrictMode (dev) and concurrent rendering can invoke them twice, which
+  // would fire onFinish twice and log a duplicate session.
+  const completedRef = useRef<CompletedExercise[]>([]);
+  useEffect(() => {
+    completedRef.current = completed;
+  }, [completed]);
+
   const currentExercise = exercises[exerciseOrder[exIdx]];
 
+  // ── Timed (isometric) exercise detection ─────────────────────────────────
+  // Plank, L-sit, hollow-body hold… are measured in seconds, not reps.
+  // Falls back to the reps-string heuristic for programs saved before isTimed.
+  const isTimed = currentExercise.isTimed ?? isTimedReps(currentExercise.reps);
+
   // ── Bodyweight exercise detection ────────────────────────────────────────
-  const isBW = currentExercise.met === MET.bodyweight;
+  // Timed holds are bodyweight-loaded too, so the weight step records
+  // body weight + any extra (e.g. a plate on a weighted plank).
+  const isBW = currentExercise.met === MET.bodyweight || isTimed;
 
   // ── Live stopwatch during active set ────────────────────────────────────
   useEffect(() => {
@@ -99,35 +129,18 @@ export default function WorkoutSession({
     setPhase("active");
   };
 
-  // ── Finish a set (stopwatch → reps input) ────────────────────────────────
-  const handleFinish = () => {
-    pendingDurationRef.current = Math.max(
-      1,
-      Math.round((Date.now() - setStartRef.current) / 1000),
-    );
-    setElapsed(0);
-    setRepsInput("");
-    setPhase("reps");
+  // ── Effective stored weight for the current exercise ─────────────────────
+  // Bodyweight / timed holds: body weight + any extra (vest, plate).
+  // Weighted exercises: the entered working weight (min 1 kg).
+  const effectiveWeight = (): number => {
+    const extraKg = Math.max(0, parseFloat(weightInput) || 0);
+    return isBW ? bodyWeightKg + extraKg : Math.max(1, extraKg);
   };
 
-  // ── Confirm reps and save the set ────────────────────────────────────────
-  const handleRepsConfirm = () => {
-    const reps = Math.max(1, parseInt(repsInput) || 1);
-    const cal = calcSetCalories(currentExercise.met, bodyWeightKg, reps);
-    // For bodyweight exercises: stored weight = body weight + any extra added (e.g. vest).
-    // For weighted exercises: stored weight = entered weight.
-    const extraKg = Math.max(0, parseFloat(weightInput) || 0);
-    const effectiveWeight = isBW
-      ? bodyWeightKg + extraKg
-      : Math.max(1, extraKg);
-    const record: SetRecord = {
-      setNumber: setIdx + 1,
-      weightKg: effectiveWeight,
-      reps,
-      durationSecs: pendingDurationRef.current,
-      caloriesBurned: cal,
-    };
-
+  // ── Append a set record and advance the session ──────────────────────────
+  // Shared by the reps-based and timed finish paths so the advance/rest/done
+  // branching lives in one place.
+  const commitAndAdvance = (record: SetRecord) => {
     const isLastSet = setIdx >= currentExercise.sets - 1;
     const isLastExercise = exIdx >= exerciseOrder.length - 1;
 
@@ -145,6 +158,7 @@ export default function WorkoutSession({
               exerciseName: currentExercise.name,
               muscle: currentExercise.muscle,
               sets: [record],
+              isTimed,
             },
           ];
     });
@@ -154,7 +168,7 @@ export default function WorkoutSession({
       return;
     }
 
-    if (prefs.showRestTimer) {
+    if (!restOff) {
       setPhase("rest");
     } else if (isLastSet) {
       advanceExercise();
@@ -162,6 +176,44 @@ export default function WorkoutSession({
       setSetIdx((s) => s + 1);
       setPhase("weight");
     }
+  };
+
+  // ── Finish a set ─────────────────────────────────────────────────────────
+  // Timed holds save the elapsed seconds directly (no reps prompt); reps-based
+  // exercises stash the duration and move on to the reps-input phase.
+  const handleFinish = () => {
+    const secs = Math.max(
+      1,
+      Math.round((Date.now() - setStartRef.current) / 1000),
+    );
+    setElapsed(0);
+    if (isTimed) {
+      const cal = calcTimedCalories(currentExercise.met, bodyWeightKg, secs);
+      commitAndAdvance({
+        setNumber: setIdx + 1,
+        weightKg: effectiveWeight(),
+        reps: 0,
+        durationSecs: secs,
+        caloriesBurned: cal,
+      });
+      return;
+    }
+    pendingDurationRef.current = secs;
+    setRepsInput("");
+    setPhase("reps");
+  };
+
+  // ── Confirm reps and save the set ────────────────────────────────────────
+  const handleRepsConfirm = () => {
+    const reps = Math.max(1, parseInt(repsInput) || 1);
+    const cal = calcSetCalories(currentExercise.met, bodyWeightKg, reps);
+    commitAndAdvance({
+      setNumber: setIdx + 1,
+      weightKg: effectiveWeight(),
+      reps,
+      durationSecs: pendingDurationRef.current,
+      caloriesBurned: cal,
+    });
   };
 
   const advanceExercise = () => {
@@ -201,35 +253,36 @@ export default function WorkoutSession({
 
   // ── Urgent finish with save ──────────────────────────────────────────────
   const handleUrgentSave = useCallback(() => {
-    setCompleted((snap) => {
-      const remaining = exerciseOrder
-        .map((i) => exercises[i])
-        .filter((ex) => !snap.find((c) => c.exerciseId === ex.id));
-      const fullSnap: CompletedExercise[] = [
-        ...snap,
-        ...remaining.map((ex) => ({
-          exerciseId: ex.id,
-          exerciseName: ex.name,
-          muscle: ex.muscle,
-          sets: [] as SetRecord[],
-        })),
-      ];
-      onFinish(buildSession(fullSnap, false));
-      return snap;
-    });
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    // Read the latest snapshot from the ref — never call onFinish from inside
+    // a state updater (see completedRef note above).
+    const snap = completedRef.current;
+    const remaining = exerciseOrder
+      .map((i) => exercises[i])
+      .filter((ex) => !snap.find((c) => c.exerciseId === ex.id));
+    const fullSnap: CompletedExercise[] = [
+      ...snap,
+      ...remaining.map((ex) => ({
+        exerciseId: ex.id,
+        exerciseName: ex.name,
+        muscle: ex.muscle,
+        sets: [] as SetRecord[],
+        isTimed: ex.isTimed ?? isTimedReps(ex.reps),
+      })),
+    ];
+    onFinish(buildSession(fullSnap, false));
   }, [exerciseOrder, exercises, onFinish, buildSession]);
 
   // ── Auto-finish when phase becomes done ──────────────────────────────────
   useEffect(() => {
     if (phase !== "done" || finishedRef.current) return;
     finishedRef.current = true;
-    // Defer one tick so the final set state has flushed before snapshotting.
-    // Cancel on unmount so onFinish can't fire on a dead component.
+    // Defer one tick so the final set state has flushed into completedRef
+    // before snapshotting. Cancel on unmount so onFinish can't fire on a dead
+    // component. Read from the ref — never call onFinish inside a state updater.
     const id = setTimeout(() => {
-      setCompleted((snap) => {
-        onFinish(buildSession(snap, false));
-        return snap;
-      });
+      onFinish(buildSession(completedRef.current, false));
     }, 0);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,6 +292,123 @@ export default function WorkoutSession({
     (s, ex) => s + ex.sets.reduce((s2, set) => s2 + set.caloriesBurned, 0),
     0,
   );
+
+  // ── Pre-workout rest setup screen ────────────────────────────────────────
+  // Shown once before the first set so the user picks rest for this workout.
+  if (!restConfigured) {
+    const restPresets = [30, 60, 90, 120];
+    return (
+      <div className="flex flex-col gap-4 pb-8">
+        {/* ── Day header ──────────────────────────────────────────────── */}
+        <div
+          className="rounded-2xl border px-4 py-3 flex items-center justify-between"
+          style={{
+            background: day.color + "12",
+            borderColor: day.color + "33",
+          }}
+        >
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-muted">
+              {day.label}
+            </p>
+            <h3
+              className="font-display text-lg tracking-wide leading-none"
+              style={{ color: day.color }}
+            >
+              {day.name}
+            </h3>
+            <p className="font-sans text-[11px] text-muted mt-0.5">
+              {exerciseOrder.length} exercises
+            </p>
+          </div>
+          <button
+            onClick={onDiscard}
+            className="shrink-0 px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-muted border border-line hover:text-crimson hover:border-crimson/40 transition-colors active:scale-95"
+          >
+            Exit
+          </button>
+        </div>
+
+        {/* ── Rest setup card ─────────────────────────────────────────── */}
+        <div className="bg-card rounded-2xl border border-line px-4 py-4 flex flex-col gap-4">
+          <div>
+            <p className="font-display text-xl tracking-wide text-fore">
+              Rest between sets
+            </p>
+            <p className="font-sans text-[11px] text-muted mt-0.5">
+              Set your rest timer for this workout.
+            </p>
+          </div>
+
+          {/* ── Presets ───────────────────────────────────────────────── */}
+          <div className="grid grid-cols-4 gap-2">
+            {restPresets.map((sec) => {
+              const active = !restOff && sessionRestSecs === sec;
+              return (
+                <button
+                  key={sec}
+                  onClick={() => {
+                    setRestOff(false);
+                    setSessionRestSecs(sec);
+                  }}
+                  className="py-3 rounded-xl font-mono text-[11px] uppercase tracking-widest transition-all active:scale-95"
+                  style={{
+                    background: active
+                      ? day.color + "20"
+                      : "rgba(255,255,255,0.04)",
+                    color: active ? day.color : "#8b8b9a",
+                    border: `1px solid ${active ? day.color + "44" : "#2a2a35"}`,
+                  }}
+                >
+                  {sec}s
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Custom seconds ────────────────────────────────────────── */}
+          <div>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1.5">
+              Custom (seconds)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={restOff ? "" : String(sessionRestSecs)}
+              onChange={(e) => {
+                setRestOff(false);
+                setSessionRestSecs(Math.max(1, parseInt(e.target.value) || 1));
+              }}
+              placeholder="seconds"
+              className="w-full bg-card2 rounded-xl border border-line px-4 py-3 font-sans text-xl text-fore outline-none focus:border-acid/60 transition-colors text-center"
+            />
+          </div>
+
+          {/* ── No rest ───────────────────────────────────────────────── */}
+          <button
+            onClick={() => setRestOff(true)}
+            className="w-full py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-widest transition-all active:scale-95"
+            style={{
+              background: restOff ? "#2a2a35" : "rgba(255,255,255,0.04)",
+              color: restOff ? "#e8e8ee" : "#8b8b9a",
+              border: `1px solid ${restOff ? "#3a3a45" : "#2a2a35"}`,
+            }}
+          >
+            No rest — advance immediately
+          </button>
+
+          {/* ── Start ─────────────────────────────────────────────────── */}
+          <button
+            onClick={() => setRestConfigured(true)}
+            className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-surface transition-all active:scale-95"
+            style={{ background: day.color }}
+          >
+            START WORKOUT
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 pb-8">
@@ -262,39 +432,37 @@ export default function WorkoutSession({
             {Math.round(totalKcal)} kcal
           </p>
         </div>
-        {showStopMenu ? (
-          <div className="flex flex-col gap-1.5 items-end shrink-0">
-            <div className="flex gap-1.5">
-              <button
-                onClick={onDiscard}
-                className="px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-crimson border border-crimson/40 hover:bg-crimson/10 transition-colors active:scale-95"
-              >
-                Discard
-              </button>
-              <button
-                onClick={handleUrgentSave}
-                className="px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-surface transition-colors active:scale-95"
-                style={{ background: day.color }}
-              >
-                Finish
-              </button>
-            </div>
+        {/* ── Exit (no save) — stays top-right, asks to confirm ─────────── */}
+        <button
+          onClick={() => setShowExitConfirm(true)}
+          className="shrink-0 px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-muted border border-line hover:text-crimson hover:border-crimson/40 transition-colors active:scale-95"
+        >
+          Exit
+        </button>
+      </div>
+
+      {/* ── Exit confirmation banner ──────────────────────────────────── */}
+      {showExitConfirm && (
+        <div className="rounded-2xl border border-crimson/40 bg-crimson/10 px-4 py-3 flex flex-col gap-2.5">
+          <p className="font-sans text-sm text-fore">
+            Are you sure? This workout data will not be saved.
+          </p>
+          <div className="flex gap-2">
             <button
-              onClick={() => setShowStopMenu(false)}
-              className="font-mono text-[9px] text-muted hover:text-fore transition-colors"
+              onClick={() => setShowExitConfirm(false)}
+              className="flex-1 py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-widest text-muted border border-line hover:text-fore transition-colors active:scale-95"
             >
-              ↩ cancel
+              Cancel
+            </button>
+            <button
+              onClick={onDiscard}
+              className="flex-1 py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-widest text-crimson border border-crimson/40 hover:bg-crimson/10 transition-colors active:scale-95"
+            >
+              Discard
             </button>
           </div>
-        ) : (
-          <button
-            onClick={() => setShowStopMenu(true)}
-            className="shrink-0 px-3 py-1.5 rounded-xl font-mono text-[10px] uppercase tracking-widest text-muted border border-line hover:text-crimson hover:border-crimson/40 transition-colors active:scale-95"
-          >
-            Stop
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Active exercise card ──────────────────────────────────────── */}
       <div className="bg-card rounded-2xl border border-line overflow-hidden">
@@ -388,16 +556,18 @@ export default function WorkoutSession({
                 {elapsed}s
               </p>
               <p className="font-mono text-[10px] text-muted mt-1 uppercase tracking-widest">
-                {isBW
-                  ? `in progress · BW ${parseFloat(weightInput) > 0 ? `+ ${weightInput} kg` : `(${bodyWeightKg} kg)`}`
-                  : `in progress · ${weightInput || "0"} kg`}
+                {isTimed
+                  ? `holding · target ${currentExercise.reps}`
+                  : isBW
+                    ? `in progress · BW ${parseFloat(weightInput) > 0 ? `+ ${weightInput} kg` : `(${bodyWeightKg} kg)`}`
+                    : `in progress · ${weightInput || "0"} kg`}
               </p>
             </div>
             <button
               onClick={handleFinish}
               className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-fore bg-emerald-500/20 border border-emerald-500/40 transition-all active:scale-95"
             >
-              FINISH SET ✓
+              {isTimed ? "FINISH HOLD ✓" : "FINISH SET ✓"}
             </button>
           </div>
         )}
@@ -445,7 +615,7 @@ export default function WorkoutSession({
         {phase === "rest" && (
           <div className="px-4 pb-4">
             <RestTimer
-              durationSecs={prefs.restDurationSecs}
+              durationSecs={sessionRestSecs}
               onDone={handleRestDone}
               onSkip={handleRestDone}
             />
@@ -474,7 +644,7 @@ export default function WorkoutSession({
                   className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors"
                   style={{
                     background: isDone
-                      ? "#44FF8828"
+                      ? "#d4ff3f"
                       : isCurrent
                         ? day.color
                         : "rgba(255,255,255,0.06)",
@@ -537,6 +707,37 @@ export default function WorkoutSession({
             {currentExercise.notes}
           </p>
         </div>
+      )}
+      {/* ── Finish urgently (saves progress) — below workout info ──────── */}
+      {showFinishConfirm ? (
+        <div className="rounded-2xl border border-line bg-card px-4 py-3 flex flex-col gap-2.5">
+          <p className="font-sans text-sm text-fore">
+            Finish workout now? Your progress will be saved.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowFinishConfirm(false)}
+              className="flex-1 py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-widest text-muted border border-line hover:text-fore transition-colors active:scale-95"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleUrgentSave}
+              className="flex-1 py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-widest text-surface transition-all active:scale-95"
+              style={{ background: day.color }}
+            >
+              Finish & Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowFinishConfirm(true)}
+          className="w-full py-3 rounded-xl font-display text-base tracking-widest text-surface transition-all active:scale-95"
+          style={{ background: day.color }}
+        >
+          Finish Workout Now
+        </button>
       )}
     </div>
   );
