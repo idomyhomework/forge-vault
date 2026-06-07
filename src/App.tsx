@@ -41,6 +41,14 @@ function ComingSoon({ label, Icon }: { label: string; Icon: LucideIcon }) {
 // ── App ────────────────────────────────────────────────────────────────────
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("habitos");
+  const [workoutActive, setWorkoutActive] = useState(false);
+  const [showWorkoutLock, setShowWorkoutLock] = useState(false);
+
+  // ── Workout lock toast ──────────────────────────────────────────────────
+  const triggerLockMessage = () => {
+    setShowWorkoutLock(true);
+    setTimeout(() => setShowWorkoutLock(false), 2500);
+  };
 
   return (
     <div className="min-h-screen bg-surface font-sans">
@@ -58,29 +66,49 @@ export default function App() {
       <main className="px-4 pt-5 pb-24 max-w-lg mx-auto">
         {activeTab === "habitos" && <Habits />}
         {activeTab === "finanzas" && <Finance />}
-        {activeTab === "gym" && <Gym />}
+        {activeTab === "gym" && (
+          <Gym onWorkoutChange={setWorkoutActive} />
+        )}
         {activeTab === "ahorros" && (
           <ComingSoon label="Ahorros" Icon={PiggyBank} />
         )}
         {activeTab === "notas" && <Notes />}
       </main>
 
-      {/* Bottom tab bar */}
+      {/* Workout lock toast ───────────────────────────────────────────────── */}
+      {showWorkoutLock && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-card border border-line rounded-2xl px-5 py-3 shadow-lg pointer-events-none">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-fore whitespace-nowrap">
+            Finish your workout to switch tabs
+          </p>
+        </div>
+      )}
+
+      {/* Bottom tab bar ──────────────────────────────────────────────────── */}
       <nav className="fixed bottom-0 left-0 right-0 bg-surface2/95 backdrop-blur-md border-t border-line flex justify-around px-2 py-2 z-40">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-95 ${
-              activeTab === tab.id ? "text-acid" : "text-muted hover:text-fore"
-            }`}
-          >
-            <tab.Icon className="w-5 h-5" strokeWidth={1.5} />
-            <span className="font-mono text-[10px] uppercase tracking-wider">
-              {tab.label}
-            </span>
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const locked = workoutActive && tab.id !== "gym";
+          return (
+            <button
+              key={tab.id}
+              onClick={() => locked ? triggerLockMessage() : setActiveTab(tab.id)}
+              aria-disabled={locked ? true : undefined}
+              title={locked ? "Finish your workout to switch tabs" : undefined}
+              className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all ${
+                locked
+                  ? "text-muted/30"
+                  : activeTab === tab.id
+                    ? "text-acid active:scale-95"
+                    : "text-muted hover:text-fore active:scale-95"
+              }`}
+            >
+              <tab.Icon className="w-5 h-5" strokeWidth={1.5} />
+              <span className="font-mono text-[10px] uppercase tracking-wider">
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

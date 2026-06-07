@@ -24,6 +24,7 @@ export default function WorkoutSession({
   bodyWeightKg,
   onFinish,
   onDiscard,
+  onWorkoutStart,
 }: {
   config: UserProgramConfig;
   dayIndex: number;
@@ -31,6 +32,7 @@ export default function WorkoutSession({
   bodyWeightKg: number;
   onFinish: (session: WSession) => void;
   onDiscard: () => void;
+  onWorkoutStart: () => void;
 }) {
   const day: UserProgramDay = config.days[dayIndex];
   const exercises = day.exercises.filter((e) => e.enabled);
@@ -399,7 +401,7 @@ export default function WorkoutSession({
 
           {/* ── Start ─────────────────────────────────────────────────── */}
           <button
-            onClick={() => setRestConfigured(true)}
+            onClick={() => { setRestConfigured(true); onWorkoutStart(); }}
             className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-surface transition-all active:scale-95"
             style={{ background: day.color }}
           >

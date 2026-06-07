@@ -12,7 +12,7 @@ import type {
   UserProgramConfig,
 } from "./gym/gymTypes";
 
-// -- Tab config --
+// ── Tab config ─────────────────────────────────────────────────────────────
 const GYM_TABS = [
   { id: "workout", label: "Workout" },
   { id: "progress", label: "Progress" },
@@ -21,8 +21,12 @@ const GYM_TABS = [
 ] as const;
 type GymTab = (typeof GYM_TABS)[number]["id"];
 
-// -- Gym component --
-export default function Gym() {
+// ── Gym component ──────────────────────────────────────────────────────────
+export default function Gym({
+  onWorkoutChange,
+}: {
+  onWorkoutChange: (active: boolean) => void;
+}) {
   const {
     profile,
     prefs,
@@ -59,15 +63,17 @@ export default function Gym() {
   const handleSessionEnd = (session: WSession) => {
     addSession(session);
     setActiveWorkout(null);
+    onWorkoutChange(false);
     setTab("workout");
   };
 
   const handleDiscard = () => {
     setActiveWorkout(null);
+    onWorkoutChange(false);
     setTab("workout");
   };
 
-  // -- Full-screen active workout --
+  // ── Full-screen active workout ───────────────────────────────────────────
   if (activeWorkout && activeProgram && profile) {
     return (
       <WorkoutSession
@@ -77,11 +83,12 @@ export default function Gym() {
         bodyWeightKg={profile.bodyWeightKg}
         onFinish={handleSessionEnd}
         onDiscard={handleDiscard}
+        onWorkoutStart={() => onWorkoutChange(true)}
       />
     );
   }
 
-  // -- Add new program flow --
+  // ── Add new program flow ─────────────────────────────────────────────────
   if (showNewProgramSelector) {
     return (
       <ProgramSelector
@@ -94,7 +101,7 @@ export default function Gym() {
     );
   }
 
-  // -- Onboarding: first launch --
+  // ── Onboarding: first launch ──────────────────────────────────────────────
   if (!profile || programs.length === 0) {
     return (
       <ProgramSelector
@@ -187,4 +194,3 @@ export default function Gym() {
     </div>
   );
 }
-
