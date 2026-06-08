@@ -1,5 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   calcSetCalories,
   calcTimedCalories,
   isTimedReps,
@@ -13,8 +31,119 @@ import type {
   CompletedExercise,
   SetRecord,
   GymPreferences,
+  UserExercise,
 } from "../gymTypes";
 import RestTimer from "./RestTimer";
+
+// ── Drag handle icon ──────────────────────────────────────────────────────
+function GripIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <circle cx="4" cy="3" r="1.2" />
+      <circle cx="10" cy="3" r="1.2" />
+      <circle cx="4" cy="7" r="1.2" />
+      <circle cx="10" cy="7" r="1.2" />
+      <circle cx="4" cy="11" r="1.2" />
+      <circle cx="10" cy="11" r="1.2" />
+    </svg>
+  );
+}
+
+// ── Sortable exercise row ─────────────────────────────────────────────────
+function SortableExerciseRow({
+  id,
+  position,
+  origIdx,
+  exIdx,
+  exercises,
+  completed,
+  dayColor,
+  isOverlay,
+}: {
+  id: string;
+  position: number;
+  origIdx: number;
+  exIdx: number;
+  exercises: UserExercise[];
+  completed: CompletedExercise[];
+  dayColor: string;
+  isOverlay?: boolean;
+}) {
+  const ex = exercises[origIdx];
+  const isDone = position < exIdx;
+  const isCurrent = position === exIdx;
+  const compEx = completed.find((c) => c.exerciseId === ex.id);
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id, disabled: isDone || isCurrent });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...(isCurrent ? { background: dayColor + "10" } : undefined),
+        opacity: isDragging && !isOverlay ? 0.35 : 1,
+      }}
+      className="px-4 py-3 border-b border-line last:border-b-0 flex items-center gap-3"
+    >
+      {/* ── Position badge ──────────────────────────────────────────── */}
+      <div
+        className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors"
+        style={{ background: isDone ? dayColor : "rgba(255,255,255,0.06)" }}
+      >
+        {isDone ? "✓" : position + 1}
+      </div>
+
+      {/* ── Name & progress ────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0">
+        <p
+          className={`font-sans text-xs font-semibold truncate ${isDone ? "text-muted" : "text-fore"}`}
+        >
+          {ex.name}
+        </p>
+        <p className="font-mono text-[9px] text-muted">
+          {compEx
+            ? `${compEx.sets.length}/${ex.sets} sets done`
+            : `${ex.sets}×${ex.reps}`}
+        </p>
+      </div>
+
+      {/* ── YouTube link ───────────────────────────────────────────── */}
+      <a
+        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + " exercise tutorial")}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 text-muted hover:text-red-400 transition-colors"
+        title="Watch on YouTube"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <YouTubeIcon />
+      </a>
+
+      {/* ── Drag handle (upcoming only) — spacer for done/current ───── */}
+      {!isDone && !isCurrent ? (
+        <button
+          {...attributes}
+          {...listeners}
+          className="shrink-0 text-muted hover:text-fore transition-colors touch-none px-1 cursor-grab active:cursor-grabbing"
+          aria-label="Drag to reorder"
+        >
+          <GripIcon />
+        </button>
+      ) : (
+        <div className="w-6 shrink-0" />
+      )}
+    </div>
+  );
+}
 
 // ── WorkoutSession component ───────────────────────────────────────────────
 export default function WorkoutSession({
@@ -60,6 +189,7 @@ export default function WorkoutSession({
   );
   const [restOff, setRestOff] = useState(!prefs.showRestTimer);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const setStartRef = useRef<number>(0);
   const pendingDurationRef = useRef<number>(0);
@@ -238,21 +368,29 @@ export default function WorkoutSession({
     }
   }, [setIdx, currentExercise.sets]);
 
-  // ── Reorder upcoming exercises ───────────────────────────────────────────
-  const moveUp = (i: number) => {
-    if (i <= exIdx + 1) return;
-    setExerciseOrder((prev) => {
-      const next = [...prev];
-      [next[i - 1], next[i]] = [next[i], next[i - 1]];
-      return next;
-    });
+  // ── DnD sensors — pointer for mouse/desktop, touch for mobile ───────────
+  // TouchSensor delay lets short taps pass through without triggering a drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+  );
+
+  // ── Drag handlers ────────────────────────────────────────────────────────
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    setActiveDragId(active.id as string);
   };
-  const moveDown = (i: number) => {
-    if (i >= exerciseOrder.length - 1 || i <= exIdx) return;
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveDragId(null);
+    if (!over || active.id === over.id) return;
     setExerciseOrder((prev) => {
-      const next = [...prev];
-      [next[i], next[i + 1]] = [next[i + 1], next[i]];
-      return next;
+      const oldIndex = prev.findIndex((i) => exercises[i].id === active.id);
+      const newIndex = prev.findIndex((i) => exercises[i].id === over.id);
+      // Block dropping into a done or current slot
+      if (newIndex <= exIdx) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
     });
   };
 
@@ -634,75 +772,63 @@ export default function WorkoutSession({
         )}
       </div>
 
-      {/* ── Exercise queue (reorderable) ──────────────────────────────── */}
+      {/* ── Exercise queue (drag-and-drop reorderable) ───────────────── */}
       <div>
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2">
           Exercise Queue
         </p>
-        <div className="bg-card rounded-2xl border border-line overflow-hidden">
-          {exerciseOrder.map((origIdx, i) => {
-            const ex = exercises[origIdx];
-            const isDone = i < exIdx;
-            const isCurrent = i === exIdx;
-            const compEx = completed.find((c) => c.exerciseId === ex.id);
-            return (
-              <div
-                key={ex.id}
-                className="px-4 py-3 border-b border-line last:border-b-0 flex items-center gap-3"
-                style={isCurrent ? { background: day.color + "10" } : undefined}
-              >
-                <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors"
-                  style={{
-                    background: isDone ? day.color : "rgba(255,255,255,0.06)",
-                  }}
-                >
-                  {isDone ? "✓" : i + 1}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={exerciseOrder.map((origIdx) => exercises[origIdx].id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="bg-card rounded-2xl border border-line overflow-hidden">
+              {exerciseOrder.map((origIdx, i) => (
+                <SortableExerciseRow
+                  key={exercises[origIdx].id}
+                  id={exercises[origIdx].id}
+                  position={i}
+                  origIdx={origIdx}
+                  exIdx={exIdx}
+                  exercises={exercises}
+                  completed={completed}
+                  dayColor={day.color}
+                />
+              ))}
+            </div>
+          </SortableContext>
+
+          {/* ── Floating ghost while dragging ──────────────────────────── */}
+          <DragOverlay>
+            {activeDragId && (() => {
+              const origIdx = exerciseOrder.find(
+                (i) => exercises[i].id === activeDragId,
+              ) ?? 0;
+              const pos = exerciseOrder.findIndex(
+                (i) => exercises[i].id === activeDragId,
+              );
+              return (
+                <div className="rounded-xl border border-line shadow-2xl overflow-hidden">
+                  <SortableExerciseRow
+                    id={activeDragId}
+                    position={pos}
+                    origIdx={origIdx}
+                    exIdx={exIdx}
+                    exercises={exercises}
+                    completed={completed}
+                    dayColor={day.color}
+                    isOverlay
+                  />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`font-sans text-xs font-semibold truncate ${isDone ? "text-muted" : "text-fore"}`}
-                  >
-                    {ex.name}
-                  </p>
-                  <p className="font-mono text-[9px] text-muted">
-                    {compEx
-                      ? `${compEx.sets.length}/${ex.sets} sets done`
-                      : `${ex.sets}×${ex.reps}`}
-                  </p>
-                </div>
-                <a
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + " exercise tutorial")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-muted hover:text-red-400 transition-colors"
-                  title="Watch on YouTube"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <YouTubeIcon />
-                </a>
-                {!isDone && !isCurrent && (
-                  <div className="flex flex-col gap-0.5 shrink-0">
-                    <button
-                      onClick={() => moveUp(i)}
-                      className="text-[11px] text-muted hover:text-fore px-1 transition-colors disabled:opacity-20"
-                      disabled={i <= exIdx + 1}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => moveDown(i)}
-                      className="text-[11px] text-muted hover:text-fore px-1 transition-colors disabled:opacity-20"
-                      disabled={i >= exerciseOrder.length - 1}
-                    >
-                      ↓
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })()}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       {/* ── Exercise tip ─────────────────────────────────────────────── */}
