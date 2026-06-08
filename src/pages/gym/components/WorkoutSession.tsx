@@ -225,15 +225,18 @@ export default function WorkoutSession({
     setPhase("weight");
   };
 
-  const handleRestDone = () => {
+  const handleRestDone = useCallback(() => {
     const isLastSet = setIdx >= currentExercise.sets - 1;
     if (isLastSet) {
-      advanceExercise();
+      setExIdx((i) => i + 1);
+      setSetIdx(0);
+      setWeightInput("");
+      setPhase("weight");
     } else {
       setSetIdx((s) => s + 1);
       setPhase("weight");
     }
-  };
+  }, [setIdx, currentExercise.sets]);
 
   // ── Reorder upcoming exercises ───────────────────────────────────────────
   const moveUp = (i: number) => {
@@ -401,7 +404,10 @@ export default function WorkoutSession({
 
           {/* ── Start ─────────────────────────────────────────────────── */}
           <button
-            onClick={() => { setRestConfigured(true); onWorkoutStart(); }}
+            onClick={() => {
+              setRestConfigured(true);
+              onWorkoutStart();
+            }}
             className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-surface transition-all active:scale-95"
             style={{ background: day.color }}
           >
@@ -567,9 +573,10 @@ export default function WorkoutSession({
             </div>
             <button
               onClick={handleFinish}
-              className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-fore bg-emerald-500/20 border border-emerald-500/40 transition-all active:scale-95"
+              style={{ background: day.color }}
+              className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-fore border border-slate-900 transition-all active:scale-95"
             >
-              {isTimed ? "FINISH HOLD ✓" : "FINISH SET ✓"}
+              {isTimed ? "FINISH HOLD" : "FINISH SET"}
             </button>
           </div>
         )}
@@ -605,7 +612,8 @@ export default function WorkoutSession({
               <button
                 onClick={handleRepsConfirm}
                 disabled={!repsInput}
-                className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-fore bg-emerald-500/20 border border-emerald-500/40 transition-all active:scale-95 disabled:opacity-40"
+                className="w-full py-3.5 rounded-xl font-display text-xl tracking-widest text-surface transition-all active:scale-95 disabled:opacity-40"
+                style={{ background: day.color }}
               >
                 CONFIRM →
               </button>
@@ -618,6 +626,7 @@ export default function WorkoutSession({
           <div className="px-4 pb-4">
             <RestTimer
               durationSecs={sessionRestSecs}
+              color={day.color}
               onDone={handleRestDone}
               onSkip={handleRestDone}
             />
@@ -645,12 +654,7 @@ export default function WorkoutSession({
                 <div
                   className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors"
                   style={{
-                    background: isDone
-                      ? "#d4ff3f"
-                      : isCurrent
-                        ? day.color
-                        : "rgba(255,255,255,0.06)",
-                    color: isCurrent ? "#0a0a0c" : undefined,
+                    background: isDone ? day.color : "rgba(255,255,255,0.06)",
                   }}
                 >
                   {isDone ? "✓" : i + 1}

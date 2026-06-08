@@ -5,10 +5,12 @@ export default function RestTimer({
   durationSecs,
   onDone,
   onSkip,
+  color,
 }: {
   durationSecs: number;
   onDone: () => void;
   onSkip: () => void;
+  color: string;
 }) {
   const finishAt = useRef(0);
   const [remaining, setRemaining] = useState(durationSecs);
@@ -36,7 +38,10 @@ export default function RestTimer({
 
   return (
     <div className="flex flex-col items-center gap-4 py-6">
-      <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-400">
+      <p
+        className="font-mono text-[10px] uppercase tracking-widest"
+        style={{ color }}
+      >
         Rest
       </p>
 
@@ -44,16 +49,29 @@ export default function RestTimer({
         <svg width="100" height="100" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
           <circle
-            cx="50" cy="50" r="44" fill="none" stroke="#44FF88"
-            strokeWidth="7" strokeLinecap="round"
-            strokeDasharray={circ} strokeDashoffset={offset}
+            cx="50"
+            cy="50"
+            r="44"
+            fill="none"
+            stroke={color}
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
             transform="rotate(-90 50 50)"
             style={{ transition: "stroke-dashoffset 0.9s linear" }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <p className="font-display text-3xl leading-none text-emerald-400">{remaining}</p>
-          <p className="font-mono text-[9px] text-muted uppercase tracking-widest">sec</p>
+          <p
+            className="font-display text-3xl leading-none "
+            style={{ color: color }}
+          >
+            {remaining}
+          </p>
+          <p className="font-mono text-[9px] text-muted uppercase tracking-widest">
+            sec
+          </p>
         </div>
       </div>
 
