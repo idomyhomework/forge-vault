@@ -15,20 +15,24 @@ export default function ProgramSelector({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [gender, setGender] = useState<Gender>("male");
   const [bodyWeight, setBodyWeight] = useState("75");
-  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(
+    null,
+  );
   const [scheduledDays, setScheduledDays] = useState<number[]>([0, 2, 4]);
 
-  // ── Filtered programs ────────────────────────────────────────────────────
+  // ── Filtered programs ───
   const filtered = ALL_PROGRAMS.filter(
     (p) => p.gender === gender || p.gender === "unisex",
   );
   const selected = ALL_PROGRAMS.find((p) => p.id === selectedProgramId) ?? null;
 
-  // ── Handlers ────────────────────────────────────────────────────────────
+  // ── Handlers ───
   const toggleDay = (idx: number) => {
     setScheduledDays((prev) =>
       prev.includes(idx)
-        ? prev.length > 1 ? prev.filter((d) => d !== idx) : prev
+        ? prev.length > 1
+          ? prev.filter((d) => d !== idx)
+          : prev
         : [...prev, idx].sort(),
     );
   };
@@ -42,12 +46,18 @@ export default function ProgramSelector({
       scheduledDays.slice(0, daysPerWeek),
     );
     if (!config) return;
-    onComplete({ gender, bodyWeightKg: parseFloat(bodyWeight) || 75 }, config);
+    onComplete(
+      {
+        gender,
+        bodyWeightKg: Math.max(30, Math.min(300, parseFloat(bodyWeight) || 75)),
+      },
+      config,
+    );
   };
 
   return (
     <div className="flex flex-col gap-5 pb-8">
-      {/* ── Header ────────────────────────────────────────────────────── */}
+      {/* ── Header ─── */}
       <div className="bg-card rounded-2xl border border-line px-4 py-3">
         <p className="font-mono text-[9px] uppercase tracking-widest text-muted mb-0.5">
           Setup
@@ -65,7 +75,7 @@ export default function ProgramSelector({
         </p>
       </div>
 
-      {/* ── Step indicator ────────────────────────────────────────────── */}
+      {/* ── Step indicator ── */}
       <div className="flex gap-1.5">
         {([1, 2, 3] as const).map((s) => (
           <div
@@ -76,7 +86,7 @@ export default function ProgramSelector({
         ))}
       </div>
 
-      {/* ── Step 1: Profile ───────────────────────────────────────────── */}
+      {/* ── Step 1: Profile ── */}
       {step === 1 && (
         <div className="flex flex-col gap-4">
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
@@ -126,7 +136,7 @@ export default function ProgramSelector({
         </div>
       )}
 
-      {/* ── Step 2: Pick program ──────────────────────────────────────── */}
+      {/* ── Step 2: Pick program ─── */}
       {step === 2 && (
         <div className="flex flex-col gap-4">
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
@@ -161,7 +171,7 @@ export default function ProgramSelector({
         </div>
       )}
 
-      {/* ── Step 3: Schedule days ─────────────────────────────────────── */}
+      {/* ── Step 3: Schedule days ─── */}
       {step === 3 && selected && (
         <div className="flex flex-col gap-4">
           <div

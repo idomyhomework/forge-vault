@@ -76,8 +76,8 @@ export function useGymData() {
     );
 
     localStorage.setItem(STORAGE_KEYS.gymMigrationV1, "1");
-  // Intentionally run once on mount only
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Derived state ────────────────────────────────────────────────────────
@@ -105,21 +105,15 @@ export function useGymData() {
 
   const deleteProgram = useCallback(
     (configId: string) => {
-      // Compute next state up front, then call each setter independently —
-      // calling setActiveId inside the setPrograms updater is impure and can
-      // fire twice under StrictMode / concurrent rendering.
-      const remaining = programs.filter((p) => p.id !== configId);
-      const nextActiveId =
-        activeId !== configId
-          ? activeId
-          : remaining.length > 0
-            ? remaining[remaining.length - 1].id
-            : null;
-      setPrograms(remaining);
-      setActiveId(nextActiveId);
+      setPrograms((prev) => prev.filter((p) => p.id !== configId));
+      setActiveId((prev) =>
+        prev !== configId
+          ? prev
+          : (programs.find((p) => p.id !== configId)?.id ?? null),
+      );
       setSessions((prev) => prev.filter((s) => s.configId !== configId));
     },
-    [programs, activeId, setPrograms, setSessions, setActiveId],
+    [programs, setPrograms, setSessions, setActiveId],
   );
 
   const updateProgram = useCallback(
